@@ -24,9 +24,7 @@ def download_llm_model(model_name: str, model_path: str):
     # Download model
     snapshot_download(
         repo_id=model_name,
-        local_dir=model_path,
-        resume_download=True,
-        local_dir_use_symlinks=False
+        local_dir=model_path
     )
     
     print(f"LLM model download complete: {model_path}")
@@ -42,9 +40,7 @@ def download_embedding_model(model_name: str, model_path: str):
     # Download model
     snapshot_download(
         repo_id=model_name,
-        local_dir=model_path,
-        resume_download=True,
-        local_dir_use_symlinks=False
+        local_dir=model_path
     )
     
     print(f"Embedding model download complete: {model_path}")
@@ -52,7 +48,9 @@ def download_embedding_model(model_name: str, model_path: str):
 def estimate_model_size(model_name: str) -> str:
     """Estimate model size"""
     size_estimates = {
+        "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B": "~65GB (FP16), ~32GB (BF16), available AWQ versions",
         "Qwen/Qwen2.5-32B-Instruct": "~65GB (FP16), ~20GB (4bit)",
+        "Qwen/Qwen2.5-32B-Instruct-AWQ": "~6GB (AWQ 4-bit quantized)",
         "Qwen/Qwen2.5-14B-Instruct": "~28GB (FP16), ~8GB (4bit)",
         "Qwen/Qwen2.5-7B-Instruct": "~14GB (FP16), ~4GB (4bit)",
         "BAAI/bge-m3": "~2.3GB",
@@ -100,7 +98,12 @@ def main():
     # VRAM usage prediction
     print("=== Memory Usage Prediction ===")
     if "32B" in llm_config['model_name']:
-        print("LLM (Qwen2.5-32B, 4bit): ~20-24GB VRAM")
+        if "DeepSeek-R1-Distill" in llm_config['model_name']:
+            print("LLM (DeepSeek-R1-32B): ~15GB VRAM per GPU (SOTA reasoning model)")
+        elif "AWQ" in llm_config['model_name']:
+            print("LLM (Qwen2.5-32B-AWQ): ~6GB VRAM per GPU (AWQ quantized)")
+        else:
+            print("LLM (Qwen2.5-32B, 4bit): ~20-24GB VRAM")
     elif "14B" in llm_config['model_name']:
         print("LLM (Qwen2.5-14B, FP16): ~28GB VRAM")
     elif "7B" in llm_config['model_name']:

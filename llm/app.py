@@ -53,7 +53,8 @@ class LLMServer:
             
             # Quantization configuration
             quantization_config = llm_config.get('quantization', {})
-            quantization = "awq" if quantization_config.get('enabled', False) else None
+            # AWQ models are pre-quantized, so no runtime quantization needed
+            quantization = None
             
             # Load VLLM model
             self.llm = LLM(

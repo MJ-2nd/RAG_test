@@ -1,11 +1,12 @@
 # LLM Model Configuration
 llm:
-  model_name: "Qwen/Qwen2.5-32B-Instruct"
-  model_path: "./models/qwen2.5-32b-instruct"  # Local path (after download)
+  model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"  # SOTA reasoning model (32B params)
+  # Alternative AWQ quantized: "Valdemardi/DeepSeek-R1-Distill-Qwen-32B-AWQ" (~6GB VRAM)
+  model_path: "./models/deepseek-r1-distill-qwen-32b"  # Local path (after download)
   
   # VRAM optimization settings
   quantization:
-    enabled: true
+    enabled: false  # AWQ model is pre-quantized, no runtime quantization needed
     bits: 4  # 4bit quantization for VRAM saving
     group_size: 128
     
