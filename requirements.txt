@@ -4,11 +4,13 @@ torch
 torchvision
 torchaudio
 
+# ✅ vLLM from source (will be built for current torch)
+git+https://github.com/vllm-project/vllm.git
+
 # Core dependencies
 faiss-cpu
 sentence-transformers
 transformers
-vllm
 fastapi
 uvicorn
 pyyaml
