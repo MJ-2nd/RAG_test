@@ -1,7 +1,8 @@
-# PyTorch with CUDA 12.1 support (compatible with CUDA 12.8)
-torch>=2.0.0 --index-url https://download.pytorch.org/whl/cu128
-torchvision>=0.15.0 --index-url https://download.pytorch.org/whl/cu128
-torchaudio>=2.0.0 --index-url https://download.pytorch.org/whl/cu128
+# PyTorch nightly with CUDA 12.1 support (supports sm_120 for RTX 5070 Ti)
+--extra-index-url https://download.pytorch.org/whl/nightly/cu121
+torch
+torchvision
+torchaudio
 
 # Core dependencies
 faiss-cpu
