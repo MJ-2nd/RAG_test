@@ -1,8 +1,6 @@
-# PyTorch nightly with CUDA 12.1 support (supports sm_120 for RTX 5070 Ti)
+# vLLM with CUDA 12.8 support (includes compatible PyTorch)
+# vLLM 0.6.1+ supports RTX 5070 Ti (Blackwell sm_120 architecture)
 --extra-index-url https://download.pytorch.org/whl/cu128
-torch
-torchvision
-torchaudio
 vllm
 
 # Core dependencies
