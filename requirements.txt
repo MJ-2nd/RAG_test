@@ -1,11 +1,9 @@
 # PyTorch nightly with CUDA 12.1 support (supports sm_120 for RTX 5070 Ti)
---extra-index-url https://download.pytorch.org/whl/nightly/cu128
+--extra-index-url https://download.pytorch.org/whl/cu128
 torch
 torchvision
 torchaudio
-
-# ✅ vLLM from source (will be built for current torch)
-git+https://github.com/vllm-project/vllm.git
+vllm
 
 # Core dependencies
 faiss-cpu
