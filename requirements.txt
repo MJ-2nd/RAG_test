@@ -1,7 +1,12 @@
+# PyTorch with CUDA 12.1 support (compatible with CUDA 12.8)
+torch>=2.0.0 --index-url https://download.pytorch.org/whl/cu128
+torchvision>=0.15.0 --index-url https://download.pytorch.org/whl/cu128
+torchaudio>=2.0.0 --index-url https://download.pytorch.org/whl/cu128
+
+# Core dependencies
 faiss-cpu
 sentence-transformers
 transformers
-torch
 vllm
 fastapi
 uvicorn
