@@ -1,0 +1,13 @@
+faiss-cpu
+sentence-transformers
+transformers
+torch
+vllm
+fastapi
+uvicorn
+pyyaml
+numpy
+accelerate
+optimum
+auto-gptq
+huggingface-hub
