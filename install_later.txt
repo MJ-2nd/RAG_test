@@ -11,7 +11,13 @@ auto-gptq
 autoawq
 
 # Performance optimization
-flash-attn
+
+########## AWARE ############
+### Install this with below command!!!
+# pip install flash-attn --no-build-isolation
+# If error is there, install dependencies one by one
+#flash-attn
+############################
 einops
 
 # Vector database
