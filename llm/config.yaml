@@ -1,38 +1,43 @@
 # LLM Model Configuration
-# 16GB GPU x2 환경 SOTA 성능 설정 (Qwen3 MoE)
+# 32GB VRAM 환경에서 안전한 설정 (AWQ 양자화 모델 우선)
 llm:
-  # === 2025 SOTA 모델 (Qwen3 MoE) ===
-  model_name: "Qwen/Qwen3-30B-A3B"  # MoE 30B total, 3B activated (~6GB)
-  model_path: "./models/qwen3-30b-a3b"  # Local path (after download)
+  # === 메모리 안전한 모델 선택 (AWQ 양자화) ===
+  model_name: "Qwen/Qwen2.5-14B-Instruct-AWQ"  # 14B AWQ (~6GB)
+  model_path: "./models/qwen2.5-14b-instruct-awq"  # Local path (after download)
   
-  # === 대안 SOTA 모델들 ===
-  # 추론 특화 모델:
-  # model_name: "Qwen/QwQ-32B-Preview"  # Chain-of-Thought 특화
-  # model_path: "./models/qwq-32b-preview"
+  # === 대안 모델들 (메모리 상황에 따라 선택) ===
+  # 더 작은 AWQ 모델:
+  # model_name: "Qwen/Qwen2.5-7B-Instruct-AWQ"   # 7B AWQ (~4GB)
+  # model_name: "Qwen/Qwen2.5-3B-Instruct-AWQ"   # 3B AWQ (~2GB)
   
-  # 안전한 고성능 모델들:
-  # model_name: "Qwen/Qwen3-8B-Instruct"  # 8B, ~16GB, 매우 안전
-  # model_name: "Qwen/Qwen3-14B-Instruct"  # 14B, ~28GB, 경계선
+  # 더 큰 AWQ 모델 (메모리 여유시):
+  # model_name: "Qwen/Qwen2.5-32B-Instruct-AWQ"  # 32B AWQ (~16GB)
+  # model_name: "Qwen/Qwen2.5-72B-Instruct-AWQ"  # 72B AWQ (~36GB)
   
-  # 기존 모델들 (보수적 선택):
-  # model_name: "Valdemardi/DeepSeek-R1-Distill-Qwen-32B-AWQ"  # 32B AWQ (~6GB)
-  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"  # 7B, ~14GB
+  # 일반 모델들 (메모리 여유시):
+  # model_name: "Qwen/Qwen3-14B-Instruct"  # 14B 일반 모델 (~28GB)
+  # model_name: "Qwen/Qwen3-8B-Instruct"   # 8B 일반 모델 (~16GB)
   
-  # VRAM optimization settings
+  # MoE 모델 (고성능 필요시):
+  # model_name: "Qwen/Qwen3-30B-A3B"  # MoE 30B (~18.6GB)
+  
+  # 양자화 설정 (AWQ 모델 사용 시 자동 비활성화)
   quantization:
-    enabled: false  # MoE 모델은 이미 효율적
+    enabled: false  # AWQ 모델은 이미 양자화됨
+    method: "awq"   # 런타임 양자화 방식 (필요시)
+    bits: 4         # 양자화 비트 수
     
-  # VLLM configuration (Qwen3 MoE 최적화)
+  # VLLM configuration (메모리 최적화)
   vllm:
-    tensor_parallel_size: 2  # 2개 GPU 활용 (MoE 분산)
-    max_model_len: 32768  # Qwen3 긴 컨텍스트 활용 (128K 지원)
-    gpu_memory_utilization: 0.85  # 적당한 메모리 사용률
-    enforce_eager: false  # MoE 성능 최적화
+    tensor_parallel_size: 2  # 2개 GPU 활용
+    max_model_len: 16384     # 컨텍스트 길이 (메모리 절약)
+    gpu_memory_utilization: 0.8  # GPU 메모리 사용률
+    enforce_eager: true      # 메모리 안정성 우선
     
-  # Generation parameters (Qwen3 최적화)
+  # Generation parameters
   generation:
-    max_tokens: 2048
-    temperature: 0.6  # Qwen3 권장 온도
+    max_tokens: 1024
+    temperature: 0.7
     top_p: 0.9
     repetition_penalty: 1.1
 
