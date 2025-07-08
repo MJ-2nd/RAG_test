@@ -1,0 +1,34 @@
+# Install these AFTER torch is installed
+# Core ML libraries
+transformers
+accelerate
+sentence-transformers
+optimum
+
+# Quantization support
+bitsandbytes
+auto-gptq
+autoawq
+
+# Performance optimization
+flash-attn
+einops
+
+# Vector database
+faiss-cpu
+
+# Web framework
+fastapi
+uvicorn[standard]
+
+# Utilities
+pyyaml
+numpy
+huggingface-hub
+datasets
+safetensors
+
+# Development tools (optional)
+# pytest
+# black
+# flake8 

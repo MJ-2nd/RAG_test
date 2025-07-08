@@ -1,0 +1,6 @@
+# PyTorch with CUDA 12.8 support for RTX 5070 Ti (Blackwell architecture)
+# Install these FIRST before other packages
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch
+torchvision
+torchaudio 
