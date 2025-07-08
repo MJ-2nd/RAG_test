@@ -12,7 +12,6 @@ def check_dependencies():
     """Check required dependencies"""
     try:
         import torch
-        import vllm
         import faiss
         import sentence_transformers
         print("✓ All dependencies are installed.")
