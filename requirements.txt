@@ -1,17 +1,39 @@
-# vLLM with CUDA 12.8 support (includes compatible PyTorch)
-# vLLM 0.6.1+ supports RTX 5070 Ti (Blackwell sm_120 architecture)
+# PyTorch with CUDA 12.8 support for RTX 5070 Ti (Blackwell architecture)
 --extra-index-url https://download.pytorch.org/whl/cu128
-vllm
+torch
+torchvision
+torchaudio
 
-# Core dependencies
-faiss-cpu
-sentence-transformers
+# Core ML libraries
 transformers
+accelerate
+sentence-transformers
+optimum
+
+# Quantization support
+bitsandbytes
+auto-gptq
+autoawq
+
+# Performance optimization
+flash-attn
+einops
+
+# Vector database
+faiss-cpu
+
+# Web framework
 fastapi
-uvicorn
+uvicorn[standard]
+
+# Utilities
 pyyaml
 numpy
-accelerate
-optimum
-auto-gptq
 huggingface-hub
+datasets
+safetensors
+
+# Development tools (optional)
+# pytest
+# black
+# flake8

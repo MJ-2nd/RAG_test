@@ -1,4 +1,9 @@
-from vllm import LLM, SamplingParams
+from transformers import (
+    AutoModelForCausalLM, 
+    AutoTokenizer, 
+    BitsAndBytesConfig,
+    pipeline
+)
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import yaml
@@ -6,6 +11,7 @@ import uvicorn
 from typing import List, Optional
 import logging
 import os
+import torch
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO)
@@ -24,12 +30,13 @@ class QueryResponse(BaseModel):
     generation_info: dict
 
 class LLMServer:
-    """VLLM-based LLM server"""
+    """Transformers-based LLM server with RTX 5070 Ti support"""
     
     def __init__(self, config_path: str = "llm/config.yaml"):
         self.config = self._load_config(config_path)
-        self.llm = None
-        self.sampling_params = None
+        self.model = None
+        self.tokenizer = None
+        self.pipeline = None
         self._initialize_llm()
     
     def _load_config(self, config_path: str) -> dict:
@@ -37,71 +44,111 @@ class LLMServer:
         with open(config_path, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
     
+    def _get_quantization_config(self, model_name: str) -> tuple:
+        """Get quantization configuration"""
+        quantization_config = self.config['llm'].get('quantization', {})
+        
+        # AWQ 모델 자동 감지
+        if "awq" in model_name.lower():
+            return None, "awq"  # AWQ는 별도 config 불필요
+        
+        # BitsAndBytes 양자화 설정
+        if quantization_config.get('enabled', False):
+            if quantization_config.get('method') == 'bitsandbytes':
+                bits = quantization_config.get('bits', 4)
+                bnb_config = BitsAndBytesConfig(
+                    load_in_4bit=(bits == 4),
+                    load_in_8bit=(bits == 8),
+                    bnb_4bit_compute_dtype=torch.float16,
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_quant_type="nf4"
+                )
+                return bnb_config, "bitsandbytes"
+        
+        return None, None
+    
     def _initialize_llm(self):
-        """Initialize LLM model"""
+        """Initialize LLM model with Transformers"""
         try:
             llm_config = self.config['llm']
             
-            # Set model path
-            model_path = llm_config['model_path']
-            if not os.path.exists(model_path):
-                logger.warning(f"Local model path {model_path} not found. Downloading from HuggingFace.")
-                model_path = llm_config['model_name']
+            # config에서 모델명 가져오기
+            model_name = llm_config['model_name']
             
-            # VLLM configuration
-            vllm_config = llm_config['vllm']
+            # 양자화 설정
+            quantization_config, quant_method = self._get_quantization_config(model_name)
             
-            # 양자화 설정 (AWQ, BitsAndBytes 지원)
-            quantization = None
-            if "awq" in model_path.lower() or "awq" in llm_config['model_name'].lower():
-                quantization = "awq"
-                logger.info("AWQ quantized model detected. Setting quantization='awq'")
-            else:
-                # Runtime quantization 설정
-                quantization_config = llm_config.get('quantization', {})
-                if quantization_config.get('enabled', False):
-                    # VLLM 지원 양자화 방식
-                    if quantization_config.get('method') == 'bitsandbytes':
-                        quantization = "bitsandbytes"
-                        logger.info("Runtime BitsAndBytes quantization enabled")
-                    elif quantization_config.get('bits') == 8:
-                        quantization = "fp8"
-                        logger.info("FP8 quantization enabled")
-                    else:
-                        logger.warning("Specified quantization method not supported in VLLM. Using FP16.")
+            logger.info(f"Loading model: {model_name}")
+            logger.info(f"Quantization method: {quant_method}")
             
-            # Load VLLM model
-            vllm_kwargs = {
-                'model': model_path,
-                'tensor_parallel_size': vllm_config['tensor_parallel_size'],
-                'max_model_len': vllm_config['max_model_len'],
-                'gpu_memory_utilization': vllm_config['gpu_memory_utilization'],
-                'enforce_eager': vllm_config['enforce_eager'],
-                'trust_remote_code': True  # Required for Qwen models
-            }
-            
-            # 양자화 설정이 있으면 추가
-            if quantization:
-                vllm_kwargs['quantization'] = quantization
-                
-            self.llm = LLM(**vllm_kwargs)
-            
-            # Set sampling parameters
-            gen_config = llm_config['generation']
-            self.sampling_params = SamplingParams(
-                max_tokens=gen_config['max_tokens'],
-                temperature=gen_config['temperature'],
-                top_p=gen_config['top_p'],
-                repetition_penalty=gen_config['repetition_penalty']
+            # 토크나이저 로드
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_name,
+                trust_remote_code=True,
+                padding_side="left"
             )
             
-            logger.info("LLM model loaded successfully")
-            logger.info(f"Model: {model_path}")
-            logger.info(f"Quantization: {quantization}")
-            logger.info(f"GPU memory utilization: {vllm_config['gpu_memory_utilization']}")
-            logger.info(f"Tensor parallel size: {vllm_config['tensor_parallel_size']}")
-            logger.info(f"Max model length: {vllm_config['max_model_len']}")
-            logger.info(f"Enforce eager: {vllm_config['enforce_eager']}")
+            # 패딩 토큰 설정
+            if self.tokenizer.pad_token is None:
+                self.tokenizer.pad_token = self.tokenizer.eos_token
+            
+            # GPU 설정
+            device_count = torch.cuda.device_count() if torch.cuda.is_available() else 0
+            
+            model_kwargs = {
+                'trust_remote_code': True,
+                'torch_dtype': torch.float16,
+                'low_cpu_mem_usage': True,
+            }
+            
+            # 멀티 GPU 설정
+            if device_count > 1:
+                model_kwargs['device_map'] = "auto"
+                logger.info(f"Using {device_count} GPUs with device_map='auto'")
+            elif device_count == 1:
+                model_kwargs['device_map'] = {"": 0}
+                logger.info("Using single GPU")
+            else:
+                model_kwargs['device_map'] = "cpu"
+                logger.info("Using CPU")
+            
+            # 양자화 설정 추가
+            if quantization_config:
+                model_kwargs['quantization_config'] = quantization_config
+            
+            # 모델 로드
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                **model_kwargs
+            )
+            logger.info("✅ Model loaded successfully")
+            
+            # Generation pipeline 생성
+            self.pipeline = pipeline(
+                "text-generation",
+                model=self.model,
+                tokenizer=self.tokenizer,
+                device_map="auto" if device_count > 1 else (0 if device_count == 1 else -1),
+                torch_dtype=torch.float16,
+                trust_remote_code=True
+            )
+            
+            # 기본 generation 설정
+            gen_config = llm_config['generation']
+            self.default_gen_kwargs = {
+                'max_new_tokens': gen_config['max_tokens'],
+                'temperature': gen_config['temperature'],
+                'top_p': gen_config['top_p'],
+                'repetition_penalty': gen_config['repetition_penalty'],
+                'do_sample': True,
+                'pad_token_id': self.tokenizer.eos_token_id,
+                'eos_token_id': self.tokenizer.eos_token_id,
+            }
+            
+            # 로그 출력
+            logger.info(f"Model loaded: {model_name}")
+            logger.info(f"Quantization: {quant_method}")
+            logger.info(f"Device count: {device_count}")
             
         except Exception as e:
             logger.error(f"Failed to initialize LLM: {e}")
@@ -111,28 +158,33 @@ class LLMServer:
                 temperature: Optional[float] = None, top_p: Optional[float] = None) -> str:
         """Generate text"""
         try:
-            # Set dynamic sampling parameters
-            sampling_params = SamplingParams(
-                max_tokens=max_tokens or self.sampling_params.max_tokens,
-                temperature=temperature or self.sampling_params.temperature,
-                top_p=top_p or self.sampling_params.top_p,
-                repetition_penalty=self.sampling_params.repetition_penalty
+            # 동적 generation 파라미터 설정
+            gen_kwargs = self.default_gen_kwargs.copy()
+            if max_tokens:
+                gen_kwargs['max_new_tokens'] = max_tokens
+            if temperature:
+                gen_kwargs['temperature'] = temperature
+            if top_p:
+                gen_kwargs['top_p'] = top_p
+            
+            # 텍스트 생성
+            outputs = self.pipeline(
+                prompt,
+                **gen_kwargs,
+                return_full_text=False  # 입력 프롬프트 제외하고 생성된 부분만 반환
             )
             
-            # Execute generation
-            outputs = self.llm.generate([prompt], sampling_params)
+            # 결과 추출
+            generated_text = outputs[0]['generated_text']
             
-            # Extract result
-            generated_text = outputs[0].outputs[0].text
-            
-            return generated_text
+            return generated_text.strip()
             
         except Exception as e:
             logger.error(f"Text generation failed: {e}")
             raise
     
     def format_chat_prompt(self, user_message: str, context: str = None) -> str:
-        """Format Qwen2.5 chat prompt"""
+        """Format Qwen chat prompt"""
         if context:
             system_message = f"""You are a helpful AI assistant that answers questions based on the given context.
 
@@ -143,7 +195,7 @@ Provide accurate and useful answers based on the above context."""
         else:
             system_message = "You are a helpful AI assistant."
         
-        # Use Qwen2.5 chat template
+        # Qwen 채팅 템플릿 사용
         chat_prompt = f"""<|im_start|>system
 {system_message}<|im_end|>
 <|im_start|>user
@@ -188,9 +240,9 @@ async def generate_text(request: QueryRequest):
         return QueryResponse(
             response=response,
             generation_info={
-                "max_tokens": request.max_tokens or llm_server.sampling_params.max_tokens,
-                "temperature": request.temperature or llm_server.sampling_params.temperature,
-                "top_p": request.top_p or llm_server.sampling_params.top_p
+                "max_tokens": request.max_tokens or llm_server.default_gen_kwargs['max_new_tokens'],
+                "temperature": request.temperature or llm_server.default_gen_kwargs['temperature'],
+                "top_p": request.top_p or llm_server.default_gen_kwargs['top_p']
             }
         )
         
@@ -200,7 +252,7 @@ async def generate_text(request: QueryRequest):
 
 @app.get("/health")
 async def health_check():
-    """Health check"""
+    """Health check endpoint"""
     return {"status": "healthy", "model_loaded": llm_server is not None}
 
 if __name__ == "__main__":
