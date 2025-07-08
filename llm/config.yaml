@@ -1,26 +1,56 @@
 # LLM Model Configuration
+# 16GB GPU x2 환경 최대 성능 설정 (28GB 활용)
 llm:
-  model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"  # SOTA reasoning model (32B params)
-  # Alternative AWQ quantized: "Valdemardi/DeepSeek-R1-Distill-Qwen-32B-AWQ" (~6GB VRAM)
-  model_path: "./models/deepseek-r1-distill-qwen-32b"  # Local path (after download)
+  # === 최대 성능 모델 옵션들 (28GB 활용) ===
+  
+  # 옵션 1: 14B 모델 (안정적, 28GB 활용)
+  model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"  # 14B params, ~28GB VRAM 활용
+  model_path: "./models/deepseek-r1-distill-qwen-14b"  # Local path (after download)
+  
+  # 옵션 2: 32B 모델 + 4bit 양자화 (최고 성능, ~28GB 활용)
+  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"  # 32B params + quantization
+  # model_path: "./models/deepseek-r1-distill-qwen-32b"
+  
+  # 옵션 3: 32B 모델 + 8bit 양자화 (고성능, ~32GB 활용)
+  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"  # 32B params + FP8
+  # model_path: "./models/deepseek-r1-distill-qwen-32b"
+  
+  # === 대안 모델들 ===
+  # 더 보수적인 선택 (메모리 부족 시):
+  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"   # 7B params (~14GB, 단일 GPU)
+  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B" # 1.5B params (~3GB, CPU 가능)
+  
+  # AWQ 양자화 버전 (메모리 절약용):
+  # model_name: "Valdemardi/DeepSeek-R1-Distill-Qwen-32B-AWQ"  # 32B AWQ (~6GB)
+  # model_name: "Valdemardi/DeepSeek-R1-Distill-Qwen-14B-AWQ"  # 14B AWQ (~3.5GB)
   
   # VRAM optimization settings
   quantization:
-    enabled: false  # AWQ model is pre-quantized, no runtime quantization needed
-    bits: 4  # 4bit quantization for VRAM saving
-    group_size: 128
+    # 옵션 1: 14B 모델 사용 시
+    enabled: false  # 14B 원본 모델 사용
     
-  # VLLM configuration
+    # 옵션 2: 32B + 4bit 양자화 사용 시 (옵션 1과 교체)
+    # enabled: true
+    # method: "bitsandbytes"  # BitsAndBytes 4bit 양자화
+    # bits: 4
+    # group_size: 128
+    
+    # 옵션 3: 32B + 8bit 양자화 사용 시 (옵션 1과 교체)
+    # enabled: true
+    # method: "fp8"  # FP8 양자화
+    # bits: 8
+    
+  # VLLM configuration (최대 성능 설정)
   vllm:
-    tensor_parallel_size: 2  # Use 2 GPUs for model parallelism
-    max_model_len: 8192  # Context length
-    gpu_memory_utilization: 0.9  # GPU memory utilization
-    enforce_eager: false
+    tensor_parallel_size: 2  # 2개 GPU 분할
+    max_model_len: 8192  # 컨텍스트 길이 (성능 최대화)
+    gpu_memory_utilization: 0.92  # 메모리 사용률 증가 (28GB 중 ~26GB 활용)
+    enforce_eager: false  # 성능 최적화를 위해 그래프 최적화 활성화
     
-  # Generation parameters
+  # Generation parameters (DeepSeek-R1 최적화)
   generation:
     max_tokens: 2048
-    temperature: 0.7
+    temperature: 0.6  # DeepSeek-R1 권장 온도 (0.5-0.7)
     top_p: 0.9
     repetition_penalty: 1.1
 

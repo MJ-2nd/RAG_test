@@ -51,21 +51,40 @@ class LLMServer:
             # VLLM configuration
             vllm_config = llm_config['vllm']
             
-            # Quantization configuration
-            quantization_config = llm_config.get('quantization', {})
-            # AWQ models are pre-quantized, so no runtime quantization needed
+            # 양자화 설정 (AWQ, BitsAndBytes 지원)
             quantization = None
+            if "awq" in model_path.lower() or "awq" in llm_config['model_name'].lower():
+                quantization = "awq"
+                logger.info("AWQ quantized model detected. Setting quantization='awq'")
+            else:
+                # Runtime quantization 설정
+                quantization_config = llm_config.get('quantization', {})
+                if quantization_config.get('enabled', False):
+                    # VLLM 지원 양자화 방식
+                    if quantization_config.get('method') == 'bitsandbytes':
+                        quantization = "bitsandbytes"
+                        logger.info("Runtime BitsAndBytes quantization enabled")
+                    elif quantization_config.get('bits') == 8:
+                        quantization = "fp8"
+                        logger.info("FP8 quantization enabled")
+                    else:
+                        logger.warning("Specified quantization method not supported in VLLM. Using FP16.")
             
             # Load VLLM model
-            self.llm = LLM(
-                model=model_path,
-                tensor_parallel_size=vllm_config['tensor_parallel_size'],
-                max_model_len=vllm_config['max_model_len'],
-                gpu_memory_utilization=vllm_config['gpu_memory_utilization'],
-                enforce_eager=vllm_config['enforce_eager'],
-                quantization=quantization,
-                trust_remote_code=True  # Required for Qwen models
-            )
+            vllm_kwargs = {
+                'model': model_path,
+                'tensor_parallel_size': vllm_config['tensor_parallel_size'],
+                'max_model_len': vllm_config['max_model_len'],
+                'gpu_memory_utilization': vllm_config['gpu_memory_utilization'],
+                'enforce_eager': vllm_config['enforce_eager'],
+                'trust_remote_code': True  # Required for Qwen models
+            }
+            
+            # 양자화 설정이 있으면 추가
+            if quantization:
+                vllm_kwargs['quantization'] = quantization
+                
+            self.llm = LLM(**vllm_kwargs)
             
             # Set sampling parameters
             gen_config = llm_config['generation']
@@ -81,6 +100,8 @@ class LLMServer:
             logger.info(f"Quantization: {quantization}")
             logger.info(f"GPU memory utilization: {vllm_config['gpu_memory_utilization']}")
             logger.info(f"Tensor parallel size: {vllm_config['tensor_parallel_size']}")
+            logger.info(f"Max model length: {vllm_config['max_model_len']}")
+            logger.info(f"Enforce eager: {vllm_config['enforce_eager']}")
             
         except Exception as e:
             logger.error(f"Failed to initialize LLM: {e}")
