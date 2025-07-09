@@ -8,18 +8,6 @@ import subprocess
 import sys
 import argparse
 
-def check_dependencies():
-    """Check required dependencies"""
-    try:
-        import torch
-        import faiss
-        import sentence_transformers
-        print("✓ All dependencies are installed.")
-        return True
-    except ImportError as e:
-        print(f"✗ Missing dependency: {e}")
-        print("Please run: pip install -r requirements.txt")
-        return False
 
 def check_gpu():
     """Check GPU availability"""
@@ -29,6 +17,7 @@ def check_gpu():
             gpu_count = torch.cuda.device_count()
             gpu_name = torch.cuda.get_device_name(0)
             gpu_memory = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+            gpu_memory *= gpu_memory
             print(f"✓ GPU available: {gpu_name} ({gpu_memory:.1f}GB)")
             print(f"✓ Number of GPUs: {gpu_count}")
             
@@ -51,17 +40,6 @@ def setup_directories():
         os.makedirs(dir_name, exist_ok=True)
         print(f"✓ Directory created: {dir_name}/")
 
-def install_dependencies():
-    """Install dependencies"""
-    print("Installing dependencies...")
-    try:
-        subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', 'requirements.txt'], 
-                      check=True)
-        print("✓ Dependencies installed successfully")
-        return True
-    except subprocess.CalledProcessError:
-        print("✗ Failed to install dependencies")
-        return False
 
 def run_download_models():
     """Run model download"""
@@ -111,22 +89,15 @@ def main():
     
     # Check system
     print("1. System Environment Check")
-    deps_ok = check_dependencies()
     gpu_ok = check_gpu()
     
     if args.check:
-        return
-    
-    if not deps_ok and not args.setup:
-        print("Please install dependencies first: python setup.py --setup")
         return
     
     # Initial setup
     if args.setup or args.all:
         print("\n2. Initial Setup")
         setup_directories()
-        if not deps_ok:
-            install_dependencies()
     
     # Model download
     if args.download or args.all:
