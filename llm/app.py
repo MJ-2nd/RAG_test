@@ -188,20 +188,25 @@ class LLMServer:
         if context:
             system_message = f"""You are a helpful AI assistant that answers questions based on the given context.
 
-Please refer to the following context to answer:
-{context}
+                            Please refer to the following context to answer:
+                            {context}
 
-Provide accurate and useful answers based on the above context."""
+                            Provide accurate and useful answers based on the above context.
+
+                            If the user's question is not related to the context, please answer that you don't know.
+                            If the context is not enough to answer the question, please answer that you don't know.
+                            If the context is not matched with your knowledge, prioritize the context.
+                            """
         else:
             system_message = "You are a helpful AI assistant."
         
         # Qwen 채팅 템플릿 사용
         chat_prompt = f"""<|im_start|>system
-{system_message}<|im_end|>
-<|im_start|>user
-{user_message}<|im_end|>
-<|im_start|>assistant
-"""
+                    {system_message}<|im_end|>
+                    <|im_start|>user
+                    {user_message}<|im_end|>
+                    <|im_start|>assistant
+                    """
         
         return chat_prompt
 
