@@ -55,7 +55,7 @@ rag:
   chunk_size: 512
   chunk_overlap: 50
   top_k: 5
-  similarity_threshold: 0.7
+  similarity_threshold: 0.3  # 테스트를 위해 낮춤
   
 # Server configuration
 server:
