@@ -2,8 +2,8 @@
 # 32GB VRAM 환경에서 안전한 설정 (AWQ 양자화 모델 우선)
 llm:
   # === 메모리 안전한 모델 선택 (AWQ 양자화) ===
-  model_name: "Qwen/Qwen2.5-14B-Instruct-AWQ"  # 14B AWQ (~6GB)
-  model_path: "./models/qwen2.5-14b-instruct-awq"  # Local path (after download)
+  # model_name: "Qwen/Qwen2.5-14B-Instruct-AWQ"  # 14B AWQ (~6GB)
+  # model_path: "./models/qwen2.5-14b-instruct-awq"  # Local path (after download)
   
   # === 대안 모델들 (메모리 상황에 따라 선택) ===
   # 더 작은 AWQ 모델:
@@ -11,7 +11,8 @@ llm:
   # model_name: "Qwen/Qwen2.5-3B-Instruct-AWQ"   # 3B AWQ (~2GB)
   
   # 더 큰 AWQ 모델 (메모리 여유시):
-  # model_name: "Qwen/Qwen2.5-32B-Instruct-AWQ"  # 32B AWQ (~16GB)
+  model_name: "Qwen/Qwen2.5-32B-Instruct-AWQ"  # 32B AWQ (~16GB)
+  model_path: "./models/qwen2.5-32b-instruct-awq"
   # model_name: "Qwen/Qwen2.5-72B-Instruct-AWQ"  # 72B AWQ (~36GB)
   
   # 일반 모델들 (메모리 여유시):
