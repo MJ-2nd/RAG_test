@@ -183,8 +183,26 @@ class LLMServer:
             logger.error(f"Text generation failed: {e}")
             raise
     
-    def format_chat_prompt(self, user_message: str, context: str = None, history: List[Dict[str, Any]] = None) -> str:
+    def clear_gpu_cache(self):
+        """Clear GPU cache to free VRAM"""
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                logger.info("GPU cache cleared")
+        except Exception as e:
+            logger.warning(f"Failed to clear GPU cache: {e}")
+    
+    def format_chat_prompt(self, user_message: str, context: str = None, history: str = None) -> str:
         """Format Qwen chat prompt"""
+        # Build system message with optimized history
+        history_section = ""
+        if history and history.strip():
+            history_section = f"""
+Previous conversation:
+{history}
+
+"""
+        
         if context:
             system_message = f"""You are a helpful AI assistant that answers questions based on the given context.
 

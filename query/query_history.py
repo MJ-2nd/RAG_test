@@ -20,3 +20,17 @@ class QueryHistory:
     def get_history(self) -> List[Dict[str, Any]]:
         """Retrieve all history entries"""
         return list(self.history_queue)
+    
+    def get_formatted_history(self) -> str:
+        """Get history in simple Q&A format for optimal token usage"""
+        if not self.history_queue:
+            return ""
+        
+        formatted_parts = []
+        for entry in self.history_queue:
+            query = entry.get('query', '')
+            response = entry.get('response', '')
+            if query and response:
+                formatted_parts.append(f"Q: {query}\nA: {response}")
+        
+        return "\n\n".join(formatted_parts)

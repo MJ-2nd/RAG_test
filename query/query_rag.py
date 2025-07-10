@@ -26,6 +26,9 @@ class RAGSystem:
         # Initialize query history
         self.query_history = QueryHistory(max_size=10)
         
+        # KV cache cleanup counter
+        self.query_count = 0
+        
         # Try to load existing index
         try:
             self.retriever.load_index(index_path)
@@ -66,13 +69,21 @@ Document {i} (File: {filename}, Chunk: {chunk_id}, Similarity: {similarity:.3f})
     def query(self, user_query: str, top_k: int = None, include_context: bool = True) -> Dict[str, Any]:
         """Process RAG query"""
         try:
+            # Increment query count and clear cache every 3 queries
+            self.query_count += 1
+            if self.query_count % 3 == 0:
+                self.llm_server.clear_gpu_cache()
+            
+            # Get formatted history for prompt
+            formatted_history = self.query_history.get_formatted_history()
+            
             # 1. Retrieve relevant documents
             retrieved_docs = self.retrieve_context(user_query, top_k)
             
             if not retrieved_docs:
                 # Generate general LLM response if no relevant documents found
                 logger.info("No relevant documents found, generating general LLM response.")
-                prompt = self.llm_server.format_chat_prompt(user_query, history=self.query_history.get_history())
+                prompt = self.llm_server.format_chat_prompt(user_query, history=formatted_history)
                 response = self.llm_server.generate(prompt)
                 
                 # Store in history queue
@@ -90,9 +101,9 @@ Document {i} (File: {filename}, Chunk: {chunk_id}, Similarity: {similarity:.3f})
             
             # 3. Generate RAG prompt and response
             if include_context:
-                prompt = self.llm_server.format_chat_prompt(user_query, context, history=self.query_history.get_history())
+                prompt = self.llm_server.format_chat_prompt(user_query, context, history=formatted_history)
             else:
-                prompt = self.llm_server.format_chat_prompt(user_query, history=self.query_history.get_history())
+                prompt = self.llm_server.format_chat_prompt(user_query, history=formatted_history)
             
             response = self.llm_server.generate(prompt)
             
