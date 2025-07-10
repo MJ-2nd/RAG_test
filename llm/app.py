@@ -8,7 +8,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import yaml
 import uvicorn
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import logging
 import os
 import torch
@@ -183,22 +183,37 @@ class LLMServer:
             logger.error(f"Text generation failed: {e}")
             raise
     
-    def format_chat_prompt(self, user_message: str, context: str = None) -> str:
+    def format_chat_prompt(self, user_message: str, context: str = None, history: List[Dict[str, Any]] = None) -> str:
         """Format Qwen chat prompt"""
         if context:
             system_message = f"""You are a helpful AI assistant that answers questions based on the given context.
 
+                            This is chat history so far:
+                            ``` "The Chat History"
+                            {history}
+                            ```
+                            Answer the user's question based on the above "The Chat History".
+
                             Please refer to the following context to answer:
+                            ``` "The Context"
                             {context}
+                            ```
 
-                            Provide accurate and useful answers based on the above context.
+                            Provide accurate and useful answers based on the above "The Context".
 
-                            If the user's question is not related to the context, please answer that you don't know.
-                            If the context is not enough to answer the question, please answer that you don't know.
-                            If the context is not matched with your knowledge, prioritize the context.
+                            If "The Context" is not matched with your knowledge, you must answer based on the context.
                             """
         else:
-            system_message = "You are a helpful AI assistant."
+            system_message = f"""You are a helpful AI assistant.
+
+                            This is chat history so far:
+                            ``` "The Chat History"
+                            {history}
+                            ```
+                            Answer the user's question based on the above "The Chat History".
+                            
+                            Please answer the user's question based on the above history.
+                            """
         
         # Qwen 채팅 템플릿 사용
         chat_prompt = f"""<|im_start|>system

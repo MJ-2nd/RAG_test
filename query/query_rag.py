@@ -4,6 +4,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from rag.retriever import FAISSRetriever
 from llm.app import LLMServer
+from query.query_history import QueryHistory
 import yaml
 import argparse
 from typing import List, Tuple, Dict, Any
@@ -21,6 +22,9 @@ class RAGSystem:
         self.retriever = FAISSRetriever(config_path)
         self.llm_server = LLMServer(config_path)
         self.index_path = index_path
+        
+        # Initialize query history
+        self.query_history = QueryHistory(max_size=10)
         
         # Try to load existing index
         try:
@@ -68,8 +72,11 @@ Document {i} (File: {filename}, Chunk: {chunk_id}, Similarity: {similarity:.3f})
             if not retrieved_docs:
                 # Generate general LLM response if no relevant documents found
                 logger.info("No relevant documents found, generating general LLM response.")
-                prompt = self.llm_server.format_chat_prompt(user_query)
+                prompt = self.llm_server.format_chat_prompt(user_query, history=self.query_history.get_history())
                 response = self.llm_server.generate(prompt)
+                
+                # Store in history queue
+                self.query_history.store(user_query, None, response)
                 
                 return {
                     "query": user_query,
@@ -83,11 +90,14 @@ Document {i} (File: {filename}, Chunk: {chunk_id}, Similarity: {similarity:.3f})
             
             # 3. Generate RAG prompt and response
             if include_context:
-                prompt = self.llm_server.format_chat_prompt(user_query, context)
+                prompt = self.llm_server.format_chat_prompt(user_query, context, history=self.query_history.get_history())
             else:
-                prompt = self.llm_server.format_chat_prompt(user_query)
+                prompt = self.llm_server.format_chat_prompt(user_query, history=self.query_history.get_history())
             
             response = self.llm_server.generate(prompt)
+            
+            # Store in history queue
+            self.query_history.store(user_query, context if include_context else None, response)
             
             return {
                 "query": user_query,

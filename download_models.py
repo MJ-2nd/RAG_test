@@ -13,9 +13,9 @@ def load_config(config_path: str = "llm/config.yaml"):
     with open(config_path, 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
-def download_llm_model(model_name: str, model_path: str):
-    """Download LLM model"""
-    print(f"Downloading LLM model: {model_name}")
+def download_model(model_name: str, model_path: str):
+    """Download model"""
+    print(f"Downloading model: {model_name}")
     print(f"Save path: {model_path}")
     
     # Create directory
@@ -27,23 +27,7 @@ def download_llm_model(model_name: str, model_path: str):
         local_dir=model_path
     )
     
-    print(f"LLM model download complete: {model_path}")
-
-def download_embedding_model(model_name: str, model_path: str):
-    """Download embedding model"""
-    print(f"Downloading embedding model: {model_name}")
-    print(f"Save path: {model_path}")
-    
-    # Create directory
-    os.makedirs(model_path, exist_ok=True)
-    
-    # Download model
-    snapshot_download(
-        repo_id=model_name,
-        local_dir=model_path
-    )
-    
-    print(f"Embedding model download complete: {model_path}")
+    print(f"Model download complete: {model_path}")
 
 def estimate_model_size(model_name: str) -> str:
     """Estimate model size"""
@@ -164,11 +148,11 @@ def main():
     try:
         # Download LLM model
         if not args.embedding_only:
-            download_llm_model(llm_config['model_name'], llm_config['model_path'])
+            download_model(llm_config['model_name'], llm_config['model_path'])
         
         # Download embedding model
         if not args.llm_only:
-            download_embedding_model(embedding_config['model_name'], embedding_config['model_path'])
+            download_model(embedding_config['model_name'], embedding_config['model_path'])
         
         print("\n=== All Model Downloads Complete ===")
         print("Next steps:")
