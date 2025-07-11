@@ -204,7 +204,7 @@ Previous conversation:
 """
         
         if context:
-            system_message = f"""You are a helpful AI assistant that answers questions based on the given context.
+            system_message = f"""You are a helpful AI assistant of device farm that answers questions based on the given context.
 
                             This is chat history so far:
                             ``` "The Chat History"
@@ -222,7 +222,7 @@ Previous conversation:
                             If "The Context" is not matched with your knowledge, you must answer based on the context.
                             """
         else:
-            system_message = f"""You are a helpful AI assistant.
+            system_message = f"""You are a helpful AI assistant of device farm.
 
                             This is chat history so far:
                             ``` "The Chat History"
