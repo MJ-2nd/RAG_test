@@ -81,6 +81,7 @@ class MCPFunctionRegistry:
     def _register_default_functions(self) -> None:
         """Register default functions"""
         self._register_time_functions()
+        self._register_adb_functions()
     
     def _register_time_functions(self) -> None:
         """Register time-related functions"""
@@ -142,6 +143,26 @@ class MCPFunctionRegistry:
         
         for func_def in time_functions:
             self.register_function(func_def)
+    
+    def _register_adb_functions(self) -> None:
+        """Register ADB-related functions"""
+        try:
+            from .adb_functions import ADB_FUNCTION_DEFINITIONS
+            
+            for func_def_dict in ADB_FUNCTION_DEFINITIONS:
+                func_def = FunctionDefinition(
+                    name=func_def_dict["name"],
+                    description=func_def_dict["description"],
+                    parameters=func_def_dict["parameters"],
+                    required_params=func_def_dict["required_params"],
+                    function=func_def_dict["function"]
+                )
+                self.register_function(func_def)
+                
+        except ImportError as e:
+            logger.warning(f"ADB functions not available: {e}")
+        except Exception as e:
+            logger.error(f"Error registering ADB functions: {e}")
 
 
 # Global function registry instance

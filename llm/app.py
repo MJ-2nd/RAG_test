@@ -14,7 +14,7 @@ import os
 import torch
 
 # MCP imports
-from mcp import MCPHandler, MCPPromptBuilder, function_registry
+from mcp import MCPHandler, MCPPromptBuilder, function_registry, ADB_FUNCTION_DEFINITIONS
 
 # Logging configuration
 logging.basicConfig(level=logging.INFO)

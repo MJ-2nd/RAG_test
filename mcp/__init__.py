@@ -9,6 +9,7 @@ from .functions import MCPFunctionRegistry, FunctionDefinition, function_registr
 from .parser import MCPResponseParser, FunctionCall, response_parser
 from .prompt_builder import MCPPromptBuilder
 from .handler import MCPHandler
+from .adb_functions import ADB_FUNCTION_DEFINITIONS
 
 __all__ = [
     'MCPFunctionRegistry',
@@ -18,7 +19,8 @@ __all__ = [
     'FunctionCall',
     'response_parser',
     'MCPPromptBuilder',
-    'MCPHandler'
+    'MCPHandler',
+    'ADB_FUNCTION_DEFINITIONS'
 ]
 
 # Version information
