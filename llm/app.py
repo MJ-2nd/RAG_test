@@ -193,8 +193,10 @@ class LLMServer:
                 'do_sample': gen_config['do_sample'],
                 'pad_token_id': self.tokenizer.eos_token_id,
                 'eos_token_id': self.tokenizer.eos_token_id,
-                'stop_sequences': gen_config.get('stop_sequences', []),
             }
+            
+            # Stop sequences는 별도로 저장 (pipeline에서 직접 사용하지 않음)
+            self.stop_sequences = gen_config.get('stop_sequences', [])
             
             # Tool-calling 설정
             self.tool_config = llm_config.get('tool_calling', {})
@@ -296,6 +298,13 @@ class LLMServer:
             
             # 결과 추출
             generated_text = outputs[0]['generated_text'].strip()
+            
+            # Stop sequences 처리 (생성 후 수동으로 제거)
+            if hasattr(self, 'stop_sequences') and self.stop_sequences:
+                for stop_seq in self.stop_sequences:
+                    if stop_seq in generated_text:
+                        generated_text = generated_text.split(stop_seq)[0].strip()
+                        break
             
             # Tool-calling 파싱 (모델 타입에 따라 다를 수 있음)
             tool_calls = []
