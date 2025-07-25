@@ -73,6 +73,18 @@ def run_interactive():
     except KeyboardInterrupt:
         print("\nProgram terminated.")
 
+def run_web_server():
+    """Run FastAPI web server"""
+    print("Starting FastAPI web server...")
+    try:
+        print("🌐 Web interface will be available at: http://localhost:8000")
+        print("📱 Press Ctrl+C to stop the server")
+        subprocess.run([sys.executable, 'llm/app.py'], check=True)
+    except subprocess.CalledProcessError:
+        print("✗ Web server failed to start")
+    except KeyboardInterrupt:
+        print("\nWeb server stopped.")
+
 def main():
     parser = argparse.ArgumentParser(description="RAG system setup and execution")
     parser.add_argument("--check", action="store_true", help="Check system only")
@@ -80,6 +92,7 @@ def main():
     parser.add_argument("--download", action="store_true", help="Download models")
     parser.add_argument("--build-index", action="store_true", help="Build index")
     parser.add_argument("--run", action="store_true", help="Run interactive mode")
+    parser.add_argument("--web", action="store_true", help="Run web server")
     parser.add_argument("--all", action="store_true", help="Perform all steps")
     
     args = parser.parse_args()
@@ -121,13 +134,19 @@ def main():
         print("\n5. RAG System Execution")
         run_interactive()
     
-    if not any([args.check, args.setup, args.download, args.build_index, args.run, args.all]):
+    # Run web server
+    if args.web or args.all:
+        print("\n6. Web Server Execution")
+        run_web_server()
+    
+    if not any([args.check, args.setup, args.download, args.build_index, args.run, args.web, args.all]):
         print("Usage:")
         print("  python setup.py --check        # Check system")
         print("  python setup.py --setup        # Initial setup")
         print("  python setup.py --download     # Download models")
         print("  python setup.py --build-index  # Build index")
         print("  python setup.py --run          # Run interactive mode")
+        print("  python setup.py --web          # Run web server")
         print("  python setup.py --all          # Perform all steps")
 
 if __name__ == "__main__":
