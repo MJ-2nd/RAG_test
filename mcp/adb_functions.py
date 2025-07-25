@@ -27,7 +27,7 @@ class ADBController:
         try:
             result = {}
             result['returncode'] = 0
-            if result.returncode == 0:
+            if result['returncode'] == 0:
                 logger.info("ADB is available")
             else:
                 logger.warning("ADB may not be properly installed")
