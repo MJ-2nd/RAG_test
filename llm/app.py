@@ -13,6 +13,9 @@ import logging
 import os
 import torch
 
+# MCP imports
+from mcp import MCPHandler, MCPPromptBuilder, function_registry
+
 # Logging configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,22 +30,47 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     response: str
+    function_calls: Optional[List[Dict[str, Any]]] = None
+    function_results: Optional[List[Dict[str, Any]]] = None
     generation_info: dict
 
 class LLMServer:
-    """Transformers-based LLM server with RTX 5070 Ti support"""
+    """Transformers-based LLM server with MCP support"""
     
     def __init__(self, config_path: str = "llm/config.yaml"):
         self.config = self._load_config(config_path)
         self.model = None
         self.tokenizer = None
         self.pipeline = None
+        self.model_type = None
+        
+        # MCP components
+        self.mcp_handler = MCPHandler(function_registry)
+        self.mcp_prompt_builder = MCPPromptBuilder(function_registry)
+        
         self._initialize_llm()
     
     def _load_config(self, config_path: str) -> dict:
         """Load configuration file"""
         with open(config_path, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
+    
+    def _detect_model_type(self, model_name: str) -> str:
+        """Detect model type from model name"""
+        model_name_lower = model_name.lower()
+        
+        if "deepseek" in model_name_lower:
+            return "deepseek"
+        elif "qwen" in model_name_lower:
+            return "qwen"
+        elif "llama" in model_name_lower:
+            return "llama"
+        elif "mistral" in model_name_lower:
+            return "mistral"
+        elif "smollm" in model_name_lower:
+            return "smollm"
+        else:
+            return "generic"
     
     def _get_quantization_config(self, model_name: str) -> tuple:
         """Get quantization configuration"""
@@ -74,11 +102,13 @@ class LLMServer:
             
             # config에서 모델명 가져오기
             model_name = llm_config['model_name']
+            self.model_type = self._detect_model_type(model_name)
             
             # 양자화 설정
             quantization_config, quant_method = self._get_quantization_config(model_name)
             
             logger.info(f"Loading model: {model_name}")
+            logger.info(f"Model type: {self.model_type}")
             logger.info(f"Quantization method: {quant_method}")
             
             # 토크나이저 로드
@@ -155,8 +185,8 @@ class LLMServer:
             raise
     
     def generate(self, prompt: str, max_tokens: Optional[int] = None, 
-                temperature: Optional[float] = None, top_p: Optional[float] = None) -> str:
-        """Generate text"""
+                temperature: Optional[float] = None, top_p: Optional[float] = None) -> Dict[str, Any]:
+        """Generate text with MCP support"""
         try:
             # 동적 generation 파라미터 설정
             gen_kwargs = self.default_gen_kwargs.copy()
@@ -175,9 +205,17 @@ class LLMServer:
             )
             
             # 결과 추출
-            generated_text = outputs[0]['generated_text']
+            generated_text = outputs[0]['generated_text'].strip()
             
-            return generated_text.strip()
+            # MCP 처리
+            mcp_result = self.mcp_handler.process_llm_response(generated_text)
+            
+            return {
+                'response': mcp_result['response_text'],
+                'function_calls': mcp_result['function_calls'],
+                'function_results': mcp_result['function_results'],
+                'has_functions': mcp_result['has_functions']
+            }
             
         except Exception as e:
             logger.error(f"Text generation failed: {e}")
@@ -193,55 +231,14 @@ class LLMServer:
             logger.warning(f"Failed to clear GPU cache: {e}")
     
     def format_chat_prompt(self, user_message: str, context: str = None, history: str = None) -> str:
-        """Format Qwen chat prompt"""
-        # Build system message with optimized history
-        history_section = ""
-        if history and history.strip():
-            history_section = f"""
-Previous conversation:
-{history}
-
-"""
-        
-        if context:
-            system_message = f"""You are a helpful AI assistant of device farm that answers questions based on the given context.
-
-                            This is chat history so far:
-                            ``` "The Chat History"
-                            {history}
-                            ```
-                            Answer the user's question based on the above "The Chat History".
-
-                            Please refer to the following context to answer:
-                            ``` "The Context"
-                            {context}
-                            ```
-
-                            Provide accurate and useful answers based on the above "The Context".
-
-                            If "The Context" is not matched with your knowledge, you must answer based on the context.
-                            """
-        else:
-            system_message = f"""You are a helpful AI assistant of device farm.
-
-                            This is chat history so far:
-                            ``` "The Chat History"
-                            {history}
-                            ```
-                            Answer the user's question based on the above "The Chat History".
-                            
-                            Please answer the user's question based on the above history.
-                            """
-        
-        # Qwen 채팅 템플릿 사용
-        chat_prompt = f"""<|im_start|>system
-                    {system_message}<|im_end|>
-                    <|im_start|>user
-                    {user_message}<|im_end|>
-                    <|im_start|>assistant
-                    """
-        
-        return chat_prompt
+        """Format chat prompt with MCP support"""
+        return self.mcp_prompt_builder.build_prompt(
+            user_message=user_message,
+            model_type=self.model_type,
+            include_functions=True,
+            context=context,
+            history=history
+        )
 
 # Global LLM server instance
 llm_server = None
@@ -259,16 +256,16 @@ async def startup_event():
 
 @app.post("/generate", response_model=QueryResponse)
 async def generate_text(request: QueryRequest):
-    """Text generation endpoint"""
+    """Text generation endpoint with MCP support"""
     if llm_server is None:
         raise HTTPException(status_code=500, detail="LLM server not initialized.")
     
     try:
-        # Format prompt
+        # Format prompt with MCP
         prompt = llm_server.format_chat_prompt(request.query)
         
-        # Generate text
-        response = llm_server.generate(
+        # Generate text with MCP processing
+        result = llm_server.generate(
             prompt=prompt,
             max_tokens=request.max_tokens,
             temperature=request.temperature,
@@ -276,11 +273,14 @@ async def generate_text(request: QueryRequest):
         )
         
         return QueryResponse(
-            response=response,
+            response=result['response'],
+            function_calls=[fc.__dict__ for fc in result['function_calls']] if result['function_calls'] else None,
+            function_results=result['function_results'],
             generation_info={
                 "max_tokens": request.max_tokens or llm_server.default_gen_kwargs['max_new_tokens'],
                 "temperature": request.temperature or llm_server.default_gen_kwargs['temperature'],
-                "top_p": request.top_p or llm_server.default_gen_kwargs['top_p']
+                "top_p": request.top_p or llm_server.default_gen_kwargs['top_p'],
+                "has_functions": result['has_functions']
             }
         )
         
@@ -291,7 +291,30 @@ async def generate_text(request: QueryRequest):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "model_loaded": llm_server is not None}
+    if llm_server is None:
+        raise HTTPException(status_code=503, detail="LLM server not initialized.")
+    
+    return {
+        "status": "healthy",
+        "model_name": llm_server.config['llm']['model_name'],
+        "model_type": llm_server.model_type,
+        "device": "cuda" if torch.cuda.is_available() else "cpu",
+        "mcp_enabled": True,
+        "available_functions": llm_server.mcp_handler.get_function_statistics()
+    }
+
+
+@app.get("/functions")
+async def list_functions():
+    """List available MCP functions"""
+    if llm_server is None:
+        raise HTTPException(status_code=503, detail="LLM server not initialized.")
+    
+    return {
+        "functions": llm_server.mcp_handler.get_function_statistics(),
+        "function_schemas": function_registry.get_function_schemas(),
+        "summary": llm_server.mcp_handler.get_available_functions_summary()
+    }
 
 if __name__ == "__main__":
     # Load configuration
