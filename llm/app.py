@@ -35,7 +35,7 @@ app.add_middleware(
 )
 
 # 정적 파일 서빙 (웹 인터페이스)
-app.mount("/web", StaticFiles(directory="../web_interface"), name="web")
+app.mount("/web", StaticFiles(directory="web_interface"), name="web")
 
 class QueryRequest(BaseModel):
     query: str
@@ -336,7 +336,7 @@ async def list_functions():
 @app.get("/")
 async def root():
     """Redirect to web interface"""
-    return FileResponse("../web_interface/index.html")
+    return FileResponse("web_interface/index.html")
 
 
 @app.post("/execute_function")
@@ -360,7 +360,7 @@ async def execute_function(request: Dict[str, Any]):
 @app.get("/web_interface")
 async def get_web_interface():
     """Serve the web interface"""
-    return FileResponse("../web_interface/index.html")
+    return FileResponse("web_interface/index.html")
 
 
 if __name__ == "__main__":
