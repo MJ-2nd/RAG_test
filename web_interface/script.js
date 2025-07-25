@@ -105,6 +105,7 @@ async function handleSendClick() {
     
     try {
         const response = await generateLLMResponse(input);
+        console.log('Response:', response);
         displayResponse(response);
     } catch (error) {
         console.error('Error generating response:', error);
