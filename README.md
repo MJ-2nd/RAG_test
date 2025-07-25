@@ -1,214 +1,361 @@
-# RAG System - 32GB VRAM Optimized with Dual GPU Support
+# RAG System with Advanced Tool-calling & MCP Support
 
-This project is a RAG (Retrieval-Augmented Generation) system optimized for 32GB VRAM environment with dual GPU model parallelism.
+이 프로젝트는 **다양한 최신 LLM 모델**을 지원하는 고급 RAG (Retrieval-Augmented Generation) 시스템입니다. **Tool-calling** 및 **MCP (Model Context Protocol)** 를 완전 지원하며, 32GB VRAM 환경에 최적화되어 있습니다.
 
-## System Architecture
+## 🚀 주요 특징
 
-### Model Selection Strategy
-- **LLM**: Qwen2.5-32B-Instruct (4bit quantization, ~20-24GB VRAM across 2 GPUs)
-- **Embedding**: BGE-M3 (CPU usage, ~2GB RAM)
-- **Retrieval**: FAISS (CPU usage)
+- **다양한 LLM 지원**: Kimi K2, Qwen, DeepSeek, SmolLM3, Llama, Mistral 등
+- **Tool-calling 지원**: 계산, 검색, 파일 탐색 등 도구 자동 실행
+- **MCP 지원**: Model Context Protocol로 확장 가능한 에이전트 구조
+- **32GB VRAM 최적화**: 양자화 및 분산 처리로 효율적인 메모리 사용
+- **듀얼 GPU 지원**: Tensor Parallelism으로 성능 최적화
+- **모델별 최적화**: 각 모델 타입에 맞는 채팅 템플릿과 설정
 
-### Resource Allocation
-- **VRAM**: LLM exclusive (~24GB total across 2 GPUs)
-- **CPU/RAM**: Embedding model + retrieval system
-- **Storage**: Model files (~70GB), index files (~hundreds of MB)
+## 🔧 시스템 아키텍처
 
-## Quick Start
+### 지원 모델 (2025년 최신)
+- **Kimi K2**: 1T MoE, 32B active, Native tool-calling (~16GB)
+- **DeepSeek R1**: 코드 특화, Tool-calling 지원 (7B~32B)
+- **SmolLM3**: 효율적인 소형 모델, Tool-calling 지원 (~6GB)
+- **Qwen 시리즈**: 다국어 지원, 부분적 tool-calling (7B~32B)
+- **Llama**: Meta의 오픈소스 모델 (8B~70B)
+- **Mistral/Mixtral**: MoE 아키텍처 (7B~8x7B)
 
-### 1. Environment Setup
+### 리소스 할당
+- **VRAM**: 모델 전용 (8GB~32GB, 모델 크기에 따라)
+- **CPU/RAM**: 임베딩 모델 + 검색 시스템 + 도구 실행
+- **Storage**: 모델 파일 (6GB~140GB), 인덱스 파일
+
+## ⚡ 빠른 시작
+
+### 1. 환경 설정
 ```bash
-# Install dependencies
+# 의존성 설치
 pip install -r requirements.txt
 
-# Additional packages (if needed)
-pip install huggingface-hub
+# 추가 패키지 (필요시)
+pip install huggingface-hub transformers>=4.45.0
 ```
 
-### 2. Model Download
+### 2. 모델 선택 및 다운로드
 ```bash
-# Download all models
+# config.yaml에서 원하는 모델 선택
+# 예: Kimi K2, DeepSeek R1, SmolLM3 등
+
+# 모든 모델 다운로드
 python download_models.py
 
-# Download LLM only
+# 특정 모델만 다운로드
 python download_models.py --llm-only
 
-# Download embedding model only
-python download_models.py --embedding-only
-
-# Check information before download
+# 다운로드 전 정보 확인
 python download_models.py --dry-run
 ```
 
-### 3. Document Preparation
+### 3. 문서 준비
 ```bash
-# Place documents in documents/ directory
+# documents/ 디렉토리에 문서 배치
 cp your_documents.txt documents/
 ```
 
-### 4. Index Building
+### 4. 인덱스 구축
 ```bash
-# Basic index building
+# 기본 인덱스 생성
 python -m rag.build_index
 
-# Custom settings
+# 사용자 정의 설정
 python -m rag.build_index --doc_dir documents --index_path models/my_index
 ```
 
-### 5. RAG System Execution
+### 5. RAG 시스템 실행
+
+#### 대화형 모드
 ```bash
-# Interactive mode
 python -m query.query_rag --interactive
-
-# Single query
-python -m query.query_rag --query "your question"
-
-# Run without context
-python -m query.query_rag --query "your question" --no-context
 ```
 
-## Detailed Configuration
+#### FastAPI 서버 (Tool-calling 지원)
+```bash
+# LLM 서버 실행
+python -m llm.app
 
-### Model Configuration (`llm/config.yaml`)
+# 브라우저에서 http://localhost:8000/docs 접속
+```
+
+## 🛠️ Tool-calling 사용법
+
+### 기본 제공 도구들
+
+1. **문서 검색** (`search_documents`)
+   ```json
+   {
+     "name": "search_documents",
+     "arguments": {
+       "query": "인공지능 개발 방법",
+       "top_k": 5
+     }
+   }
+   ```
+
+2. **수학 계산** (`calculate`)
+   ```json
+   {
+     "name": "calculate", 
+     "arguments": {
+       "expression": "2 + 3 * 4"
+     }
+   }
+   ```
+
+3. **현재 시간** (`get_current_time`)
+   ```json
+   {
+     "name": "get_current_time",
+     "arguments": {}
+   }
+   ```
+
+4. **파일 검색** (`search_files`)
+   ```json
+   {
+     "name": "search_files",
+     "arguments": {
+       "pattern": "*.py",
+       "directory": "."
+     }
+   }
+   ```
+
+### 도구 사용 예시
+
+**질문**: "현재 시간을 알려주고, 2024년부터 몇 년이 지났는지 계산해줘"
+
+**LLM 자동 응답** (모델에 따라 형식이 다를 수 있음):
+```
+<tool_call>
+{"name": "get_current_time", "arguments": {}}
+</tool_call>
+
+<tool_call>
+{"name": "calculate", "arguments": {"expression": "2025 - 2024"}}
+</tool_call>
+
+현재 시간은 2025-01-XX이고, 2024년부터 1년이 지났습니다.
+```
+
+## 🔧 상세 설정
+
+### 모델 설정 (`llm/config.yaml`)
 
 ```yaml
 llm:
-  model_name: "Qwen/Qwen2.5-32B-Instruct"
-  quantization:
+  # 현재 선택된 모델 (쉽게 변경 가능)
+  model_name: "moonshotai/Kimi-K2-Instruct"  # 또는 다른 모델
+  model_path: "./models/kimi-k2-instruct"
+  
+  # Tool-calling 설정 (모델별 자동 최적화)
+  tool_calling:
     enabled: true
-    bits: 4  # 4bit quantization for VRAM saving
+    format: "json"  # 모델에 따라 자동 선택
+    max_tools_per_call: 5
+    parallel_tools: true
+    
+  # GPU 설정 (모델 크기에 따라 자동 조정)
   vllm:
-    tensor_parallel_size: 2  # Use 2 GPUs for model parallelism
-    gpu_memory_utilization: 0.85  # GPU memory utilization
+    tensor_parallel_size: 2      # GPU 수
+    max_model_len: 32768         # 컨텍스트 길이
+    gpu_memory_utilization: 0.85
+    
+  # Generation 설정 (Tool-calling 최적화)
+  generation:
+    max_tokens: 2048
+    temperature: 0.3  # Tool-calling에는 낮은 temperature 권장
+    top_p: 0.9
 
-embedding:
-  model_name: "BAAI/bge-m3"
-  device: "cpu"  # Run on CPU
-  batch_size: 32
+# MCP 설정
+mcp:
+  enabled: true
+  protocol_version: "2025.1"
+  tools_registry: "./tools/"
 
+# RAG 설정 (Tool-calling 연동)
 rag:
   chunk_size: 512
   chunk_overlap: 50
   top_k: 5
-  similarity_threshold: 0.7
+  similarity_threshold: 0.3
+  enable_tool_retrieval: true
 ```
 
-### Alternative Model Configurations
+### 모델별 권장 설정
 
-#### Smaller VRAM Usage (14B model)
+#### 고성능 모델 (32GB+ VRAM)
 ```yaml
 llm:
-  model_name: "Qwen/Qwen2.5-14B-Instruct"
-  # Uses ~28GB VRAM with FP16 (across 2 GPUs)
+  model_name: "moonshotai/Kimi-K2-Instruct"        # MoE, ~16GB
+  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B"  # ~65GB
 ```
 
-#### Faster Processing (7B model)
+#### 중간 성능 모델 (16GB+ VRAM)
 ```yaml
 llm:
-  model_name: "Qwen/Qwen2.5-7B-Instruct"
-  # Uses ~14GB VRAM with FP16 (across 2 GPUs)
+  model_name: "Qwen/Qwen2.5-14B-Instruct-AWQ"     # ~6GB
+  # model_name: "HuggingFaceTB/SmolLM3-3B-Instruct"     # ~6GB
 ```
 
-## Usage
-
-### Interactive Mode
-```bash
-python -m query.query_rag --interactive
+#### 효율적 모델 (8GB+ VRAM)
+```yaml
+llm:
+  model_name: "Qwen/Qwen2.5-7B-Instruct"          # ~14GB
+  # model_name: "mistralai/Mistral-7B-Instruct-v0.3"   # ~14GB
 ```
 
-Available commands in interactive mode:
-- `/stats`: Show index statistics
-- `/context on/off`: Toggle context usage
-- `/topk <number>`: Set number of documents to retrieve
-- `quit` or `exit`: Exit
+## 🌐 API 사용법
 
-### FastAPI Server
+### FastAPI 엔드포인트
+
+#### 1. 텍스트 생성 (Tool-calling 포함)
 ```bash
-# Run LLM server
-python -m llm.app
-
-# Access http://localhost:8000/docs in browser
+curl -X POST "http://localhost:8000/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "현재 시간을 알려주고 2+3을 계산해줘",
+    "tools": [
+      {
+        "name": "get_current_time",
+        "description": "Get current time",
+        "parameters": {"type": "object", "properties": {}}
+      },
+      {
+        "name": "calculate", 
+        "description": "Perform calculations",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "expression": {"type": "string"}
+          }
+        }
+      }
+    ]
+  }'
 ```
 
-API endpoints:
-- `POST /generate`: Text generation
-- `GET /health`: Health check
-
-## Performance Optimization
-
-### VRAM Saving Tips
-1. **Use 4bit quantization**: ~75% memory usage reduction
-2. **CPU embedding model**: Dedicated VRAM for LLM
-3. **Adjust context length**: Control memory with `max_model_len` setting
-4. **Dual GPU setup**: Distribute model across 2 GPUs
-
-### Retrieval Performance Enhancement
-1. **Adjust chunk size**: Tune `chunk_size` according to document characteristics
-2. **Embedding batch size**: Adjust `batch_size` for CPU performance
-3. **FAISS index type**: Automatically selected based on document count
-
-### Response Quality Improvement
-1. **Adjust similarity threshold**: Set `similarity_threshold`
-2. **Optimize document count**: Tune `top_k` value
-3. **Custom prompt templates**: Improve LLM output quality
-
-## Troubleshooting
-
-### Out of Memory Error
+#### 2. 사용 가능한 도구 목록
 ```bash
-# Reduce GPU memory utilization
-# Set gpu_memory_utilization to 0.8 or lower in config.yaml
+curl "http://localhost:8000/tools"
 ```
 
-### Model Loading Failure
+#### 3. 상태 확인
 ```bash
-# Re-download model files
+curl "http://localhost:8000/health"
+```
+
+## 🎯 성능 최적화
+
+### VRAM 절약 팁
+1. **모델 선택**: 용도에 맞는 적절한 크기 선택
+2. **양자화 사용**: AWQ, BitsAndBytes 4bit 양자화
+3. **듀얼 GPU 분산**: Tensor Parallelism으로 메모리 분산
+4. **CPU 임베딩**: VRAM을 LLM 전용으로 활용
+
+### Tool-calling 성능 향상
+1. **낮은 Temperature**: Tool-calling에는 0.3 권장
+2. **병렬 도구 실행**: `parallel_tools: true`로 속도 향상
+3. **모델별 최적화**: 각 모델에 맞는 채팅 템플릿 자동 선택
+
+## 🔧 사용자 정의 도구 추가
+
+### 1. 도구 정의 파일 생성 (`tools/my_tool.json`)
+```json
+{
+  "name": "my_custom_tool",
+  "description": "내 사용자 정의 도구",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "input": {"type": "string", "description": "입력 값"}
+    },
+    "required": ["input"]
+  }
+}
+```
+
+### 2. 도구 실행 로직 추가 (`llm/app.py`)
+```python
+async def execute_tool(self, tool_call: ToolCall) -> Dict[str, Any]:
+    if tool_call.name == "my_custom_tool":
+        input_value = tool_call.arguments.get('input')
+        # 사용자 정의 로직 구현
+        result = my_custom_logic(input_value)
+        return {"result": result}
+```
+
+## 🐛 문제 해결
+
+### 메모리 부족 오류
+```bash
+# GPU 메모리 사용률 줄이기
+# config.yaml에서 gpu_memory_utilization을 0.8 이하로 설정
+
+# 더 작은 모델 사용
+# SmolLM3-3B 또는 Qwen2.5-7B로 변경
+```
+
+### 모델 로딩 실패
+```bash
+# 모델 파일 재다운로드
 python download_models.py --llm-only
 
-# Set HuggingFace token (if needed)
+# HuggingFace 토큰 설정 (필요시)
 huggingface-cli login
 ```
 
-### Poor Retrieval Performance
+### Tool-calling 오류
 ```bash
-# Rebuild index
-python -m rag.build_index --doc_dir documents --index_path models/new_index
+# 도구 레지스트리 확인
+ls tools/
+python -c "import json; print(json.load(open('tools/calculate.json')))"
+
+# 모델이 tool-calling을 지원하는지 확인
+curl http://localhost:8000/health
 ```
 
-## System Requirements
+## 💻 시스템 요구사항
 
-### Hardware
-- **GPU**: 2x GPUs with total 32GB VRAM (e.g., 2x RTX 4090, 2x RTX 3090, etc.)
-- **CPU**: Multi-core processor (for embedding processing)
-- **RAM**: Minimum 16GB, recommended 32GB+
-- **Storage**: Minimum 100GB free space
+### 하드웨어
+- **GPU**: 8GB~32GB VRAM (모델에 따라)
+  - **소형 모델**: 8GB (SmolLM3, Qwen-7B)
+  - **중형 모델**: 16GB (Qwen-14B, DeepSeek-14B)
+  - **대형 모델**: 32GB (Kimi K2, DeepSeek-32B)
+- **CPU**: 멀티코어 프로세서 (임베딩 처리용)
+- **RAM**: 최소 16GB, 권장 32GB+
+- **Storage**: 최소 100GB 여유 공간
 
-### Software
-- Python 3.8+
-- CUDA 11.8+ (for GPU usage)
-- PyTorch 2.0+
-- VLLM 0.2.0+
+### 소프트웨어
+- Python 3.9+
+- CUDA 12.0+ (GPU 사용시)
+- PyTorch 2.1+
+- Transformers 4.45.0+
 
-## Dual GPU Configuration
+## 🚀 지원 모델 비교
 
-This system is configured to use 2 GPUs for model parallelism:
-- **tensor_parallel_size: 2** - Distributes the 32B model across 2 GPUs
-- **Automatic load balancing** - VLLM handles GPU memory distribution
-- **Reduced per-GPU memory usage** - Each GPU uses ~12GB instead of 24GB
+| 모델 | 크기 | VRAM | Tool-calling | 특징 |
+|------|------|------|--------------|------|
+| **Kimi K2** | 1T MoE (32B active) | ~16GB | ✅ Native | MoE, 최신 |
+| **DeepSeek R1** | 7B~32B | ~14GB~65GB | ✅ Good | 코드 특화 |
+| **SmolLM3** | 3B | ~6GB | ✅ Good | 효율적 |
+| **Qwen 2.5** | 7B~32B | ~14GB~65GB | ⚠️ Partial | 다국어 |
+| **Llama 3.1** | 8B~70B | ~16GB~140GB | ⚠️ Limited | Meta |
+| **Mistral** | 7B~8x7B | ~14GB~90GB | ⚠️ Limited | MoE |
 
-### GPU Requirements
-- 2 GPUs with at least 16GB VRAM each
-- GPUs should be of similar performance for optimal load balancing
-- NVLink connection recommended but not required
+## 📄 라이선스
 
-## License
+이 프로젝트는 MIT 라이선스를 따릅니다.
 
-This project follows the MIT License.
+## 🤝 기여하기
 
-## Contributing
+버그 리포트, 기능 요청, Pull Request를 환영합니다.
 
-Bug reports, feature requests, and pull requests are welcome.
+## 💬 지원
 
-## Support
-
-Please create an issue if you have questions or problems.
+질문이나 문제가 있으시면 이슈를 생성해 주세요.

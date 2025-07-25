@@ -32,22 +32,31 @@ def download_model(model_name: str, model_path: str):
 def estimate_model_size(model_name: str) -> str:
     """Estimate model size"""
     size_estimates = {
+        # Kimi K2 models (2025 latest tool-calling models)
+        "moonshotai/Kimi-K2-Instruct": "~16GB (MoE 1T/32B active), requires ~16GB VRAM",
+        "moonshotai/Kimi-K2-Base": "~16GB (MoE 1T/32B active), requires ~16GB VRAM",
+        
         # DeepSeek-R1 models
         "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B": "~65GB (FP16), requires ~64GB VRAM",
         "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B": "~28GB (FP16), requires ~28GB VRAM",
         "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B": "~14GB (FP16), requires ~14GB VRAM",
         "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B": "~3GB (FP16), requires ~3GB VRAM",
         
+        # SmolLM3 (efficient tool-calling model)
+        "HuggingFaceTB/SmolLM3-3B-Instruct": "~6GB (FP16), requires ~6GB VRAM",
+        
         # AWQ quantized versions
         "Valdemardi/DeepSeek-R1-Distill-Qwen-32B-AWQ": "~6GB (AWQ 4-bit), requires ~6GB VRAM",
         "Valdemardi/DeepSeek-R1-Distill-Qwen-14B-AWQ": "~3.5GB (AWQ 4-bit), requires ~3.5GB VRAM",
         "Valdemardi/DeepSeek-R1-Distill-Qwen-7B-AWQ": "~1.8GB (AWQ 4-bit), requires ~1.8GB VRAM",
         
-        # Other models
+        # Qwen models (legacy)
         "Qwen/Qwen2.5-32B-Instruct": "~65GB (FP16), ~20GB (4bit)",
         "Qwen/Qwen2.5-32B-Instruct-AWQ": "~6GB (AWQ 4-bit quantized)",
         "Qwen/Qwen2.5-14B-Instruct": "~28GB (FP16), ~8GB (4bit)",
         "Qwen/Qwen2.5-7B-Instruct": "~14GB (FP16), ~4GB (4bit)",
+        
+        # Embedding models
         "BAAI/bge-m3": "~2.3GB",
         "BAAI/bge-large-en-v1.5": "~1.3GB",
         "sentence-transformers/all-MiniLM-L6-v2": "~90MB"
@@ -95,15 +104,70 @@ def main():
     model_name_lower = llm_config['model_name'].lower()
     quantization_config = llm_config.get('quantization', {})
     
-    if "awq" in model_name_lower:
+    # Model type detection and memory prediction
+    if "kimi" in model_name_lower or "moonshotai" in model_name_lower:
+        print("LLM (Kimi K2): ~16GB total, ~8GB per GPU with tensor_parallel_size=2")
+        print("✅ 32GB VRAM 환경에 최적 (Tool-calling 지원, MoE 최적화)")
+        print("🔧 Tool-calling & MCP 완전 지원")
+    elif "smollm3" in model_name_lower:
+        print("LLM (SmolLM3-3B): ~6GB total, single GPU 가능")
+        print("✅ 16GB GPU 단일 사용으로 충분 (Tool-calling 지원)")
+        print("🔧 Tool-calling 지원")
+    elif "deepseek" in model_name_lower:
         if "32b" in model_name_lower:
-            print("LLM (DeepSeek-R1-32B-AWQ): ~6GB total, ~3GB per GPU with tensor_parallel_size=2")
-            print("✅ 16GB GPU x2 환경에 적합 (하지만 메모리 활용도 낮음)")
+            print("LLM (DeepSeek R1-32B): ~65GB total, ~32GB per GPU with tensor_parallel_size=2")
+            print("⚠️  32GB GPU x2 환경에서 한계 (양자화 권장)")
         elif "14b" in model_name_lower:
-            print("LLM (DeepSeek-R1-14B-AWQ): ~3.5GB total, single GPU 가능")
+            print("LLM (DeepSeek R1-14B): ~28GB total, ~14GB per GPU")
+            print("✅ 32GB VRAM 환경에 적합")
+        elif "7b" in model_name_lower:
+            print("LLM (DeepSeek R1-7B): ~14GB total, single GPU 가능")
+            print("✅ 16GB GPU로 충분")
+        print("🔧 Code-specialized with tool-calling")
+    elif "qwen" in model_name_lower:
+        if "32b" in model_name_lower:
+            if "awq" in model_name_lower:
+                print("LLM (Qwen2.5-32B-AWQ): ~16GB total, ~8GB per GPU")
+                print("✅ 32GB VRAM 환경에 최적 (AWQ 양자화)")
+            else:
+                print("LLM (Qwen2.5-32B): ~65GB total, ~32GB per GPU")
+                print("⚠️  양자화 권장")
+        elif "14b" in model_name_lower:
+            if "awq" in model_name_lower:
+                print("LLM (Qwen2.5-14B-AWQ): ~6GB total, single GPU 가능")
+                print("✅ 16GB GPU로 충분")
+            else:
+                print("LLM (Qwen2.5-14B): ~28GB total, ~14GB per GPU")
+                print("✅ 32GB VRAM 환경에 적합")
+        elif "7b" in model_name_lower:
+            print("LLM (Qwen2.5-7B): ~14GB total, single GPU 가능")
+            print("✅ 16GB GPU로 충분")
+        print("🌐 Multilingual support, partial tool-calling")
+    elif "llama" in model_name_lower:
+        if "70b" in model_name_lower:
+            print("LLM (Llama-70B): ~140GB total, 분산 처리 필수")
+            print("❌ 32GB 환경에서는 양자화 없이 불가능")
+        elif "8b" in model_name_lower:
+            print("LLM (Llama-8B): ~16GB total, single GPU 가능")
+            print("✅ 32GB VRAM 환경에 적합")
+        print("🦙 Meta's open-source LLM")
+    elif "mistral" in model_name_lower or "mixtral" in model_name_lower:
+        if "mixtral" in model_name_lower:
+            print("LLM (Mixtral MoE): ~90GB total, ~45GB per GPU")
+            print("⚠️  32GB 환경에서는 양자화 필요")
+            print("🔧 MoE architecture")
+        else:
+            print("LLM (Mistral-7B): ~14GB total, single GPU 가능")
+            print("✅ 16GB GPU로 충분")
+    elif "awq" in model_name_lower:
+        if "32b" in model_name_lower:
+            print("LLM (32B-AWQ): ~16GB total, ~8GB per GPU with tensor_parallel_size=2")
+            print("✅ 32GB VRAM 환경에 적합 (AWQ 양자화)")
+        elif "14b" in model_name_lower:
+            print("LLM (14B-AWQ): ~6GB total, single GPU 가능")
             print("✅ 16GB GPU 단일 사용으로 충분")
         elif "7b" in model_name_lower:
-            print("LLM (DeepSeek-R1-7B-AWQ): ~1.8GB total, single GPU 가능")
+            print("LLM (7B-AWQ): ~3GB total, single GPU 가능")
             print("✅ 매우 여유있는 메모리 사용")
     elif "32b" in model_name_lower:
         if quantization_config.get('enabled', False):

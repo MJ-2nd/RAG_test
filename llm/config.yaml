@@ -1,64 +1,95 @@
 # LLM Model Configuration
-# 32GB VRAM 환경에서 안전한 설정 (AWQ 양자화 모델 우선)
+# 32GB VRAM 환경에서 안전한 설정 (다양한 LLM 모델 지원)
 llm:
-  # === 메모리 안전한 모델 선택 (AWQ 양자화) ===
-  # model_name: "Qwen/Qwen2.5-14B-Instruct-AWQ"  # 14B AWQ (~6GB)
-  # model_path: "./models/qwen2.5-14b-instruct-awq"  # Local path (after download)
+  # === 현재 선택된 모델 (Tool-calling 지원) ===
+  model_name: "moonshotai/Kimi-K2-Instruct"  # 1T MoE (~16GB, 32B active)
+  model_path: "./models/kimi-k2-instruct"     # Local path (after download)
   
-  # === 대안 모델들 (메모리 상황에 따라 선택) ===
-  # 더 작은 AWQ 모델:
-  # model_name: "Qwen/Qwen2.5-7B-Instruct-AWQ"   # 7B AWQ (~4GB)
-  # model_name: "Qwen/Qwen2.5-3B-Instruct-AWQ"   # 3B AWQ (~2GB)
+  # === Tool-calling 지원 모델들 ===
+  # Kimi K2 (MoE, Native tool-calling)
+  # model_name: "moonshotai/Kimi-K2-Instruct"              # 1T MoE (~16GB)
+  # model_name: "moonshotai/Kimi-K2-Base"                  # Base model
   
-  # 더 큰 AWQ 모델 (메모리 여유시):
-  model_name: "Qwen/Qwen2.5-32B-Instruct-AWQ"  # 32B AWQ (~16GB)
-  model_path: "./models/qwen2.5-32b-instruct-awq"
-  # model_name: "Qwen/Qwen2.5-72B-Instruct-AWQ"  # 72B AWQ (~36GB)
+  # DeepSeek R1 (Code-specialized with tool-calling)
+  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B" # 32B (~65GB)
+  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B" # 14B (~28GB)
   
-  # 일반 모델들 (메모리 여유시):
-  # model_name: "Qwen/Qwen3-14B-Instruct"  # 14B 일반 모델 (~28GB)
-  # model_name: "Qwen/Qwen3-8B-Instruct"   # 8B 일반 모델 (~16GB)
+  # SmolLM3 (Efficient tool-calling)
+  # model_name: "HuggingFaceTB/SmolLM3-3B-Instruct"        # 3B (~6GB)
   
-  # MoE 모델 (고성능 필요시):
-  # model_name: "Qwen/Qwen3-30B-A3B"  # MoE 30B (~18.6GB)
+  # Qwen 시리즈 (Multilingual, partial tool-calling)
+  # model_name: "Qwen/Qwen2.5-32B-Instruct-AWQ"           # 32B AWQ (~16GB)
+  # model_name: "Qwen/Qwen2.5-14B-Instruct-AWQ"           # 14B AWQ (~6GB)
+  # model_name: "Qwen/Qwen2.5-7B-Instruct"                # 7B (~14GB)
   
-  # 양자화 설정 (AWQ 모델 사용 시 자동 비활성화)
+  # Llama 시리즈 (Meta's models)
+  # model_name: "meta-llama/Llama-3.1-8B-Instruct"        # 8B (~16GB)
+  # model_name: "meta-llama/Llama-3.1-70B-Instruct"       # 70B (분산 필요)
+  
+  # Mistral/Mixtral (MoE architecture)
+  # model_name: "mistralai/Mixtral-8x7B-Instruct-v0.1"    # MoE (~90GB)
+  # model_name: "mistralai/Mistral-7B-Instruct-v0.3"      # 7B (~14GB)
+  
+  # Tool-calling 설정 (모델별 자동 최적화)
+  tool_calling:
+    enabled: true
+    format: "json"              # json 또는 xml (모델에 따라 자동 선택)
+    max_tools_per_call: 5       # 한 번에 호출 가능한 도구 수
+    tool_timeout: 30            # 도구 실행 타임아웃 (초)
+    parallel_tools: true        # 병렬 도구 실행 지원
+    
+  # 양자화 설정 (모델 타입에 따라 자동 감지)
   quantization:
-    enabled: false  # AWQ 모델은 이미 양자화됨
-    method: "awq"   # 런타임 양자화 방식 (필요시)
-    bits: 4         # 양자화 비트 수
+    enabled: false  # MoE/AWQ 모델은 이미 최적화됨
+    method: "auto"  # auto, bitsandbytes, awq
+    bits: 4         # 4 또는 8 (bitsandbytes용)
     
-  # VLLM configuration (메모리 최적화)
+  # GPU 설정 (모델 크기에 따라 자동 조정)
   vllm:
-    tensor_parallel_size: 2  # 2개 GPU 활용
-    max_model_len: 16384     # 컨텍스트 길이 (메모리 절약)
-    gpu_memory_utilization: 0.8  # GPU 메모리 사용률
-    enforce_eager: true      # 메모리 안정성 우선
+    tensor_parallel_size: 2      # GPU 수에 따라 조정
+    max_model_len: 32768         # 컨텍스트 길이 (모델별 최적화)
+    gpu_memory_utilization: 0.85 # GPU 메모리 사용률
+    enforce_eager: false         # MoE는 false, 일반 모델은 true
+    enable_chunked_prefill: true # 효율적 prefill
     
-  # Generation parameters
+  # Generation 파라미터 (Tool-calling 최적화)
   generation:
-    max_tokens: 1024
-    temperature: 0.7
+    max_tokens: 2048            # Tool-calling 응답용
+    temperature: 0.3            # Tool-calling은 낮은 temperature 권장
     top_p: 0.9
-    repetition_penalty: 1.1
+    repetition_penalty: 1.05    # 반복 방지
+    do_sample: true
+    stop_sequences: ["<|im_end|>", "</tool_call>", "</function_call>"]
 
-# Embedding model configuration (CPU usage)
+# Embedding model configuration (CPU 사용으로 VRAM 절약)
 embedding:
-  model_name: "BAAI/bge-m3"
+  model_name: "BAAI/bge-m3"     # 다국어 지원 임베딩
+  # model_name: "BAAI/bge-large-en-v1.5"           # 영어 특화
+  # model_name: "sentence-transformers/all-MiniLM-L6-v2"  # 경량
   model_path: "./models/bge-m3"
-  device: "cpu"  # Run on CPU to save VRAM
+  device: "cpu"  # CPU 사용으로 VRAM 절약
   batch_size: 32
   max_length: 1024
   
-# RAG configuration
+# RAG configuration (Tool-calling과 연동)
 rag:
   chunk_size: 512
   chunk_overlap: 50
   top_k: 5
-  similarity_threshold: 0.3  # 테스트를 위해 낮춤
+  similarity_threshold: 0.3
+  enable_tool_retrieval: true   # Tool을 통한 검색 지원
+  
+# MCP (Model Context Protocol) 설정
+mcp:
+  enabled: true
+  protocol_version: "2025.1"
+  max_context_length: 32768
+  tools_registry: "./tools/"    # MCP 도구 등록 디렉토리
   
 # Server configuration
 server:
   host: "0.0.0.0"
   port: 8000
   workers: 1
+  enable_cors: true             # Tool-calling API 접근용
+  max_request_size: "50MB"      # 대용량 tool 데이터 지원
