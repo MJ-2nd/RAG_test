@@ -113,6 +113,7 @@ class LLMServer:
     
     def _initialize_llm(self):
         """Initialize LLM model with tool-calling support for various model types"""
+        logger.info("=== LLM INITIALIZATION START ===")
         try:
             llm_config = self.config['llm']
             
@@ -127,19 +128,24 @@ class LLMServer:
             logger.info(f"Model type detected: {self.model_type}")
             logger.info(f"Optimization method: {quant_method}")
             
+            logger.info("Loading tokenizer")
             # 토크나이저 로드
             self.tokenizer = AutoTokenizer.from_pretrained(
                 model_name,
                 trust_remote_code=True,
                 padding_side="left"
             )
+            logger.info("Tokenizer loaded successfully")
             
             # 패딩 토큰 설정
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
+                logger.info("Set pad_token to eos_token")
             
+            logger.info("Setting up GPU configuration")
             # GPU 설정
             device_count = torch.cuda.device_count() if torch.cuda.is_available() else 0
+            logger.info(f"Available GPUs: {device_count}")
             
             model_kwargs = {
                 'trust_remote_code': True,
@@ -150,6 +156,7 @@ class LLMServer:
             # Flash Attention 지원 체크 (지원하는 모델만)
             if device_count > 0 and self.model_type in ["kimi", "qwen", "deepseek", "llama"]:
                 model_kwargs['attn_implementation'] = "flash_attention_2"
+                logger.info("Flash Attention 2 enabled")
             
             # 멀티 GPU 설정
             if device_count > 1:
@@ -165,7 +172,9 @@ class LLMServer:
             # 양자화 설정 추가
             if quantization_config:
                 model_kwargs['quantization_config'] = quantization_config
+                logger.info("Quantization config added")
             
+            logger.info("Loading model with AutoModelForCausalLM")
             # 모델 로드
             self.model = AutoModelForCausalLM.from_pretrained(
                 model_name,
@@ -173,6 +182,7 @@ class LLMServer:
             )
             logger.info("✅ Model loaded successfully")
             
+            logger.info("Creating generation pipeline")
             # Generation pipeline 생성
             self.pipeline = pipeline(
                 "text-generation",
@@ -182,7 +192,9 @@ class LLMServer:
                 torch_dtype=torch.float16,
                 trust_remote_code=True
             )
+            logger.info("Pipeline created successfully")
             
+            logger.info("Setting up generation parameters")
             # 기본 generation 설정 (Tool-calling 최적화)
             gen_config = llm_config['generation']
             self.default_gen_kwargs = {
@@ -194,9 +206,11 @@ class LLMServer:
                 'pad_token_id': self.tokenizer.eos_token_id,
                 'eos_token_id': self.tokenizer.eos_token_id,
             }
+            logger.info(f"Generation kwargs: {self.default_gen_kwargs}")
             
             # Stop sequences는 별도로 저장 (pipeline에서 직접 사용하지 않음)
             self.stop_sequences = gen_config.get('stop_sequences', [])
+            logger.info(f"Stop sequences: {self.stop_sequences}")
             
             # Tool-calling 설정
             self.tool_config = llm_config.get('tool_calling', {})
@@ -204,9 +218,13 @@ class LLMServer:
             logger.info(f"Model loaded: {model_name}")
             logger.info(f"Tool-calling enabled: {self.tool_config.get('enabled', False)}")
             logger.info(f"MCP support: {self.config.get('mcp', {}).get('enabled', False)}")
+            logger.info("=== LLM INITIALIZATION COMPLETE ===")
             
         except Exception as e:
             logger.error(f"Failed to initialize LLM: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise
     
     def _load_tools(self):
@@ -279,7 +297,9 @@ class LLMServer:
                 temperature: Optional[float] = None, top_p: Optional[float] = None,
                 tools: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         """Generate text with optional tool-calling"""
+        logger.info("=== GENERATE METHOD START ===")
         try:
+            logger.info("Setting up generation parameters")
             # 동적 generation 파라미터 설정
             gen_kwargs = self.default_gen_kwargs.copy()
             if max_tokens:
@@ -289,28 +309,42 @@ class LLMServer:
             if top_p:
                 gen_kwargs['top_p'] = top_p
             
+            logger.info(f"Generation kwargs: {gen_kwargs}")
+            logger.info(f"Pipeline available: {self.pipeline is not None}")
+            
+            logger.info("Calling pipeline for text generation")
             # 텍스트 생성
             outputs = self.pipeline(
                 prompt,
                 **gen_kwargs,
                 return_full_text=False  # 입력 프롬프트 제외하고 생성된 부분만 반환
             )
+            logger.info("Pipeline call completed")
             
+            logger.info("Extracting generated text")
             # 결과 추출
             generated_text = outputs[0]['generated_text'].strip()
+            logger.info(f"Raw generated text: '{generated_text}'")
             
+            logger.info("Processing stop sequences")
             # Stop sequences 처리 (생성 후 수동으로 제거)
             if hasattr(self, 'stop_sequences') and self.stop_sequences:
                 for stop_seq in self.stop_sequences:
                     if stop_seq in generated_text:
                         generated_text = generated_text.split(stop_seq)[0].strip()
+                        logger.info(f"Stopped at sequence: {stop_seq}")
                         break
             
+            logger.info("Parsing tool calls")
             # Tool-calling 파싱 (모델 타입에 따라 다를 수 있음)
             tool_calls = []
             if tools and self.tool_config.get('enabled', False):
                 tool_calls = self._parse_tool_calls(generated_text)
+                logger.info(f"Parsed {len(tool_calls)} tool calls")
+            else:
+                logger.info("Tool calling disabled or no tools provided")
             
+            logger.info("=== GENERATE METHOD COMPLETE ===")
             return {
                 'response': generated_text,
                 'tool_calls': tool_calls
@@ -318,6 +352,9 @@ class LLMServer:
             
         except Exception as e:
             logger.error(f"Text generation failed: {e}")
+            logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise
     
     def _parse_tool_calls(self, text: str) -> List[ToolCall]:
@@ -443,10 +480,15 @@ class LLMServer:
     def format_chat_prompt(self, user_message: str, context: str = None, history: str = None,
                           tools: Optional[List[Dict[str, Any]]] = None) -> str:
         """Format chat prompt with appropriate template based on model type"""
+        logger.info("=== FORMATTING CHAT PROMPT ===")
+        logger.info(f"User message: {user_message}")
+        logger.info(f"Model type: {self.model_type}")
+        logger.info(f"Tools provided: {len(tools) if tools else 0}")
         
         # Tool definitions을 시스템 메시지에 포함
         tools_section = ""
         if tools and self.tool_config.get('enabled', False):
+            logger.info("Adding tools section to prompt")
             tools_json = json.dumps(tools, indent=2, ensure_ascii=False)
             
             # 모델 타입에 따른 tool-calling 형식 안내
@@ -456,12 +498,14 @@ To use a tool, respond with:
 <tool_call>
 {"name": "tool_name", "arguments": {"param": "value"}}
 </tool_call>"""
+                logger.info("Using ChatML tool format")
             else:
                 tool_format = """
 To use a tool, respond with a JSON object in a code block:
 ```json
 {"name": "tool_name", "arguments": {"param": "value"}}
 ```"""
+                logger.info("Using JSON tool format")
             
             tools_section = f"""
 
@@ -471,6 +515,8 @@ Available tools:
 
 You can use multiple tools by including multiple tool call blocks.
 """
+        else:
+            logger.info("No tools section added")
         
         # 기본 시스템 메시지
         history_section = ""
@@ -480,6 +526,7 @@ Previous conversation:
 {history}
 
 """
+            logger.info("Added history section")
         
         if context:
             system_message = f"""You are a helpful AI assistant with advanced reasoning and tool-calling capabilities.
@@ -494,14 +541,17 @@ Please refer to the following context to answer:
 Provide accurate and useful answers based on the above context.
 If the context doesn't contain relevant information, you can use available tools or provide answers based on your knowledge.
 {tools_section}"""
+            logger.info("Added context to system message")
         else:
             system_message = f"""You are a helpful AI assistant with advanced reasoning and tool-calling capabilities.
 
 {history_section}Answer the user's question based on the above conversation history.
 {tools_section}"""
+            logger.info("Using basic system message")
         
         # 모델 타입에 따른 채팅 템플릿 적용
         template_type = self._get_chat_template(self.model_type)
+        logger.info(f"Using template type: {template_type}")
         
         if template_type == "chatml":
             # ChatML 형식 (Kimi, Qwen, DeepSeek, SmolLM 등)
@@ -532,6 +582,8 @@ If the context doesn't contain relevant information, you can use available tools
 User: {user_message}
 """
         
+        logger.info(f"Final prompt length: {len(chat_prompt)} characters")
+        logger.info("=== CHAT PROMPT FORMATTING COMPLETE ===")
         return chat_prompt
 
 # Global LLM server instance
@@ -541,33 +593,58 @@ llm_server = None
 async def startup_event():
     """Initialize LLM server on app startup"""
     global llm_server
+    logger.info("=== SERVER STARTUP BEGIN ===")
     try:
+        logger.info("Creating LLMServer instance")
         llm_server = LLMServer()
         logger.info("LLM server initialization complete")
+        logger.info(f"Model type: {llm_server.model_type}")
+        logger.info(f"Tool calling enabled: {llm_server.tool_config.get('enabled', False)}")
+        logger.info(f"Available tools: {len(llm_server.tools_registry)}")
+        logger.info("=== SERVER STARTUP COMPLETE ===")
     except Exception as e:
         logger.error(f"LLM server initialization failed: {e}")
+        logger.error(f"Exception type: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise
 
 @app.post("/generate", response_model=QueryResponse)
 async def generate_text(request: QueryRequest):
     """Text generation endpoint with tool-calling support"""
+    logger.info(f"=== REQUEST RECEIVED ===")
+    logger.info(f"Query: {request.query}")
+    logger.info(f"Max tokens: {request.max_tokens}")
+    logger.info(f"Temperature: {request.temperature}")
+    logger.info(f"Top_p: {request.top_p}")
+    
     if llm_server is None:
+        logger.error("LLM server not initialized")
         raise HTTPException(status_code=500, detail="LLM server not initialized.")
     
     try:
+        logger.info("=== PREPARING TOOLS ===")
         # Available tools 준비
         available_tools = None
         if request.tools:
             available_tools = request.tools
+            logger.info(f"Using provided tools: {len(request.tools)} tools")
         elif llm_server.tool_config.get('enabled', False):
             available_tools = list(llm_server.tools_registry.values())
+            logger.info(f"Using registry tools: {len(available_tools)} tools")
+        else:
+            logger.warning("No tools available")
         
+        logger.info("=== FORMATTING PROMPT ===")
         # Format prompt
         prompt = llm_server.format_chat_prompt(
             request.query, 
             tools=available_tools
         )
+        logger.info(f"Prompt length: {len(prompt)} characters")
+        logger.info(f"Prompt preview: {prompt[:200]}...")
         
+        logger.info("=== GENERATING TEXT ===")
         # Generate text
         result = llm_server.generate(
             prompt=prompt,
@@ -576,18 +653,27 @@ async def generate_text(request: QueryRequest):
             top_p=request.top_p,
             tools=available_tools
         )
+        logger.info(f"Generated text length: {len(result['response'])} characters")
+        logger.info(f"Generated text: {result['response']}")
+        logger.info(f"Tool calls found: {len(result['tool_calls'])}")
         
         # Execute tools if any
         executed_tools = []
         if result['tool_calls']:
-            for tool_call in result['tool_calls']:
+            logger.info("=== EXECUTING TOOLS ===")
+            for i, tool_call in enumerate(result['tool_calls']):
+                logger.info(f"Executing tool {i+1}/{len(result['tool_calls'])}: {tool_call.name}")
                 tool_result = await llm_server.execute_tool(tool_call)
+                logger.info(f"Tool {tool_call.name} result: {tool_result}")
                 executed_tools.append({
                     'tool_call': tool_call.dict(),
                     'result': tool_result
                 })
+        else:
+            logger.info("No tools to execute")
         
-        return QueryResponse(
+        logger.info("=== PREPARING RESPONSE ===")
+        response = QueryResponse(
             response=result['response'],
             tool_calls=result['tool_calls'],
             generation_info={
@@ -598,9 +684,15 @@ async def generate_text(request: QueryRequest):
                 "tool_results": executed_tools
             }
         )
+        logger.info("=== RESPONSE READY ===")
+        logger.info(f"Final response length: {len(response.response)} characters")
+        return response
         
     except Exception as e:
         logger.error(f"Text generation failed: {e}")
+        logger.error(f"Exception type: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tools")
