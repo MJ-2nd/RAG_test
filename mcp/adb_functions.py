@@ -26,7 +26,7 @@ class ADBController:
         """Check if ADB is available in system PATH"""
         try:
             result = {}
-            result.returncode = 0
+            result['returncode'] = 0
             if result.returncode == 0:
                 logger.info("ADB is available")
             else:
@@ -45,10 +45,10 @@ class ADBController:
             logger.debug(f"Executing ADB command: {' '.join(full_command)}")
             
             result = {}
-            result.returncode = 0
+            result['returncode'] = 0
             
             return {
-                "success": result.returncode == 0
+                "success": result['returncode'] == 0
             }
             
         except subprocess.TimeoutExpired:
@@ -296,6 +296,35 @@ class ADBController:
                 battery_info[key.strip()] = value.strip()
         
         return battery_info
+    
+    def send_keyevent(self, key_code: str, device_id: Optional[str] = None) -> Dict[str, Any]:
+        """Send key event to device"""
+        command = ["shell", "input", "keyevent", key_code]
+        if device_id:
+            command = ["-s", device_id] + command
+        
+        result = self._execute_adb_command(command)
+        
+        return {
+            "success": result["success"],
+            "message": f"Key event {key_code} sent successfully" if result["success"] else f"Failed to send key event {key_code}",
+            "details": result["stderr"] if not result["success"] else ""
+        }
+    
+    def execute_shell_command(self, shell_command: str, device_id: Optional[str] = None) -> Dict[str, Any]:
+        """Execute shell command on device"""
+        command = ["shell"] + shell_command.split()
+        if device_id:
+            command = ["-s", device_id] + command
+        
+        result = self._execute_adb_command(command)
+        
+        return {
+            "success": result["success"],
+            "output": result.get("stdout", ""),
+            "error": result.get("stderr", ""),
+            "message": "Shell command executed successfully" if result["success"] else "Failed to execute shell command"
+        }
 
 
 # Global ADB controller instance
@@ -358,7 +387,22 @@ def get_battery_info(device_id: str = None) -> Dict[str, Any]:
     return adb_controller.get_battery_info(device_id)
 
 
-# Function definitions for MCP
+# Unified key event function
+def send_keyevent(key_code: str, device_id: str = None) -> Dict[str, Any]:
+    """Send key event to device (KEYCODE_HOME, KEYCODE_BACK, KEYCODE_CAMERA, etc.)"""
+    return adb_controller.send_keyevent(key_code, device_id)
+
+def execute_shell_command(shell_command: str, device_id: str = None) -> Dict[str, Any]:
+    """Execute shell command on device (wm size, dumpsys wifi, pm clear, etc.)"""
+    return adb_controller.execute_shell_command(shell_command, device_id)
+
+
+
+# Unified shell command function (already exists)
+# execute_shell_command() handles all shell commands
+
+
+# Optimized function definitions for MCP
 ADB_FUNCTION_DEFINITIONS = [
     {
         "name": "get_connected_devices",
@@ -590,5 +634,49 @@ ADB_FUNCTION_DEFINITIONS = [
         },
         "required_params": [],
         "function": get_battery_info
+    },
+    # Unified key event function
+    {
+        "name": "send_keyevent",
+        "description": "Send key event (KEYCODE_HOME, KEYCODE_BACK, KEYCODE_CAMERA, KEYCODE_VOLUME_UP, etc.)",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "key_code": {
+                    "type": "string",
+                    "description": "Key code (e.g., KEYCODE_HOME, KEYCODE_BACK, KEYCODE_CAMERA, KEYCODE_VOLUME_UP, KEYCODE_POWER)"
+                },
+                "device_id": {
+                    "type": "string",
+                    "description": "Device ID (optional, uses first connected device if not specified)"
+                }
+            },
+            "required": ["key_code"],
+            "additionalProperties": False
+        },
+        "required_params": ["key_code"],
+        "function": send_keyevent
+    },
+    # Unified shell command function
+    {
+        "name": "execute_shell_command",
+        "description": "Execute shell command on device (wm size, dumpsys wifi, pm clear, etc.)",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "shell_command": {
+                    "type": "string",
+                    "description": "Shell command to execute"
+                },
+                "device_id": {
+                    "type": "string",
+                    "description": "Device ID (optional, uses first connected device if not specified)"
+                }
+            },
+            "required": ["shell_command"],
+            "additionalProperties": False
+        },
+        "required_params": ["shell_command"],
+        "function": execute_shell_command
     }
 ] 
