@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADB LLM Controller</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 ADB LLM Controller</h1>
+            <p>자연어로 안드로이드 기기를 제어하세요</p>
+        </header>
+
+        <main>
+            <!-- Input Section -->
+            <div class="input-section">
+                <div class="input-container">
+                    <textarea 
+                        id="userInput" 
+                        placeholder="예: 홈으로 돌아가고 3초 기다린 뒤에 설정을 열어줘..."
+                        rows="3"
+                    ></textarea>
+                    <button id="sendButton" class="send-btn">
+                        <span>📤 Send</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div id="loadingIndicator" class="loading hidden">
+                <div class="spinner"></div>
+                <span>LLM이 응답을 생성하고 있습니다...</span>
+            </div>
+
+            <!-- Response Section -->
+            <div id="responseSection" class="response-section hidden">
+                <h3>💬 LLM Answer</h3>
+                <div id="llmAnswer" class="llm-answer"></div>
+            </div>
+
+            <!-- Function Calls Section -->
+            <div id="functionCallsSection" class="function-calls-section hidden">
+                <h3>🔧 Function Calls</h3>
+                <div id="functionCallsList" class="function-calls-list"></div>
+            </div>
+
+            <!-- Execution Results -->
+            <div id="executionResults" class="execution-results hidden">
+                <h3>📊 Execution Results</h3>
+                <div id="resultsList" class="results-list"></div>
+            </div>
+        </main>
+
+        <!-- Status Bar -->
+        <footer class="status-bar">
+            <div class="status-item">
+                <span class="status-label">Status:</span>
+                <span id="statusText" class="status-text">Ready</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Connected Devices:</span>
+                <span id="deviceCount" class="status-text">0</span>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

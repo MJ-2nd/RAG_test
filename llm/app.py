@@ -5,6 +5,9 @@ from transformers import (
     pipeline
 )
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import yaml
 import uvicorn
@@ -21,6 +24,18 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="RAG LLM Server", version="1.0.0")
+
+# CORS 설정
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 개발용 - 프로덕션에서는 특정 도메인만 허용
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 정적 파일 서빙 (웹 인터페이스)
+app.mount("/web", StaticFiles(directory="../web_interface"), name="web")
 
 class QueryRequest(BaseModel):
     query: str
@@ -315,6 +330,38 @@ async def list_functions():
         "function_schemas": function_registry.get_function_schemas(),
         "summary": llm_server.mcp_handler.get_available_functions_summary()
     }
+
+
+# 웹 인터페이스 관련 엔드포인트들
+@app.get("/")
+async def root():
+    """Redirect to web interface"""
+    return FileResponse("../web_interface/index.html")
+
+
+@app.post("/execute_function")
+async def execute_function(request: Dict[str, Any]):
+    """Execute a specific function"""
+    try:
+        function_name = request.get("function_name")
+        arguments = request.get("arguments", {})
+        
+        if not function_name:
+            raise HTTPException(status_code=400, detail="function_name is required")
+        
+        result = function_registry.execute_function(function_name, arguments)
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error executing function {function_name}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/web_interface")
+async def get_web_interface():
+    """Serve the web interface"""
+    return FileResponse("../web_interface/index.html")
+
 
 if __name__ == "__main__":
     # Load configuration
