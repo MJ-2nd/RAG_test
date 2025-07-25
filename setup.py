@@ -67,7 +67,8 @@ def run_interactive():
     """Run interactive mode"""
     print("Starting RAG system interactive mode...")
     try:
-        subprocess.run([sys.executable, '-m', 'query.query_rag', '--interactive'], check=True)
+        # subprocess.run([sys.executable, '-m', 'query.query_rag', '--interactive'], check=True)
+        subprocess.run([sys.executable, '-m', 'query.query_rag',], check=True)
     except subprocess.CalledProcessError:
         print("✗ RAG system execution failed")
     except KeyboardInterrupt:
@@ -79,7 +80,16 @@ def run_web_server():
     try:
         print("🌐 Web interface will be available at: http://localhost:8000")
         print("📱 Press Ctrl+C to stop the server")
-        subprocess.run([sys.executable, 'llm/app.py'], check=True)
+        
+        # 현재 디렉토리를 Python 경로에 추가하여 모듈을 찾을 수 있도록 함
+        env = os.environ.copy()
+        current_dir = os.getcwd()
+        if 'PYTHONPATH' in env:
+            env['PYTHONPATH'] = f"{current_dir}:{env['PYTHONPATH']}"
+        else:
+            env['PYTHONPATH'] = current_dir
+        
+        subprocess.run([sys.executable, 'llm/app.py'], check=True, env=env)
     except subprocess.CalledProcessError:
         print("✗ Web server failed to start")
     except KeyboardInterrupt:
