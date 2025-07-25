@@ -1,34 +1,43 @@
 # LLM Model Configuration
-# 32GB VRAM 환경에서 안전한 설정 (다양한 LLM 모델 지원)
+# 32GB VRAM 최대 활용 설정 (성능 순 정렬)
 llm:
-  # === 현재 선택된 모델 (Tool-calling 지원) ===
-  model_name: "moonshotai/Kimi-K2-Instruct"  # 1T MoE (~16GB, 32B active)
-  model_path: "./models/kimi-k2-instruct"     # Local path (after download)
+  # === 현재 선택된 모델 (32GB VRAM 최대 활용) ===
+  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"  # 14B (~28GB, 32GB 최적 활용)
+  # model_path: "./models/deepseek-r1-14b"     # Local path (after download)
   
-  # === Tool-calling 지원 모델들 ===
-  # Kimi K2 (MoE, Native tool-calling)
-  # model_name: "moonshotai/Kimi-K2-Instruct"              # 1T MoE (~16GB)
-  # model_name: "moonshotai/Kimi-K2-Base"                  # Base model
+  # === 32GB VRAM 최대 활용 모델들 (성능 순) ===
+  # 1순위: DeepSeek R1 14B (코드 특화, Tool-calling 지원, 32GB 최적)
+  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B" # 14B (~28GB) 🥇 최고 성능
   
-  # DeepSeek R1 (Code-specialized with tool-calling)
-  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B" # 32B (~65GB)
-  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B" # 14B (~28GB)
+  # 2순위: Qwen2.5 32B AWQ (양자화로 32GB 활용, 다국어)
+  # model_name: "Qwen/Qwen2.5-32B-Instruct-AWQ"           # 32B AWQ (~16GB) 🥈 고성능
   
-  # SmolLM3 (Efficient tool-calling)
-  # model_name: "HuggingFaceTB/SmolLM3-3B-Instruct"        # 3B (~6GB)
+  # 3순위: DeepSeek R1 32B AWQ (코드 특화, 양자화)
+  model_name: "Valdemardi/DeepSeek-R1-Distill-Qwen-32B-AWQ" # 32B AWQ (~16GB) 🥉 코드 특화
+  model_path: "./models/deepseek-r1-32b-awq"
   
-  # Qwen 시리즈 (Multilingual, partial tool-calling)
-  # model_name: "Qwen/Qwen2.5-32B-Instruct-AWQ"           # 32B AWQ (~16GB)
-  # model_name: "Qwen/Qwen2.5-14B-Instruct-AWQ"           # 14B AWQ (~6GB)
-  # model_name: "Qwen/Qwen2.5-7B-Instruct"                # 7B (~14GB)
+  # 4순위: Qwen2.5 14B (다국어, 부분적 tool-calling)
+  # model_name: "Qwen/Qwen2.5-14B-Instruct"               # 14B (~28GB) 🏅 다국어
   
-  # Llama 시리즈 (Meta's models)
-  # model_name: "meta-llama/Llama-3.1-8B-Instruct"        # 8B (~16GB)
-  # model_name: "meta-llama/Llama-3.1-70B-Instruct"       # 70B (분산 필요)
+  # 5순위: Llama 3.1 8B (안정적, 제한적 tool-calling)
+  # model_name: "meta-llama/Llama-3.1-8B-Instruct"        # 8B (~16GB) 🏅 안정적
   
-  # Mistral/Mixtral (MoE architecture)
-  # model_name: "mistralai/Mixtral-8x7B-Instruct-v0.1"    # MoE (~90GB)
-  # model_name: "mistralai/Mistral-7B-Instruct-v0.3"      # 7B (~14GB)
+  # 6순위: Mistral 7B (MoE 아키텍처, 제한적 tool-calling)
+  # model_name: "mistralai/Mistral-7B-Instruct-v0.3"      # 7B (~14GB) 🏅 MoE
+  
+  # 7순위: SmolLM3 3B (Tool-calling 특화, 효율적)
+  # model_name: "HuggingFaceTB/SmolLM3-3B-Instruct"       # 3B (~6GB) 🏅 Tool-calling 특화
+  
+  # === 대용량 모델들 (32GB 초과, 양자화 필요) ===
+  # Kimi K2 (실제 크기: 1T MoE ~65-90GB, 32GB VRAM 부족)
+  # model_name: "moonshotai/Kimi-K2-Instruct"              # 1T MoE (~65-90GB) ❌ 32GB 부족
+  # model_name: "moonshotai/Kimi-K2-Base"                  # 1T MoE (~65-90GB) ❌ 32GB 부족
+  
+  # DeepSeek R1 32B (양자화 없이는 32GB 부족)
+  # model_name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B" # 32B (~65GB) ❌ 32GB 부족
+  
+  # Mixtral (MoE, 양자화 필요)
+  # model_name: "mistralai/Mixtral-8x7B-Instruct-v0.1"    # MoE (~90GB) ❌ 32GB 부족
   
   # Tool-calling 설정 (모델별 자동 최적화)
   tool_calling:

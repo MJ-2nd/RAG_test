@@ -1,12 +1,12 @@
 {
   "name": "calculate",
-  "description": "수학적 계산을 수행합니다. 기본적인 산술 연산 (덧셈, 뺄셈, 곱셈, 나눗셈, 거듭제곱)을 지원합니다.",
+  "description": "Performs mathematical calculations. Supports basic arithmetic operations (addition, subtraction, multiplication, division, exponentiation).",
   "parameters": {
     "type": "object",
     "properties": {
       "expression": {
         "type": "string",
-        "description": "계산할 수학 표현식 (예: '2 + 3 * 4', '10 ** 2', '(5 + 3) / 2')"
+        "description": "Mathematical expression to calculate (e.g., '2 + 3 * 4', '10 ** 2', '(5 + 3) / 2')"
       }
     },
     "required": ["expression"]
@@ -26,7 +26,7 @@
     }
   ],
   "safety_notes": [
-    "보안상의 이유로 eval() 함수를 사용하지 않고 AST 파싱을 통해 안전하게 계산합니다.",
-    "복잡한 함수나 변수는 지원되지 않습니다."
+    "For security reasons, uses AST parsing for safe calculation instead of eval() function.",
+    "Complex functions or variables are not supported."
   ]
 } 

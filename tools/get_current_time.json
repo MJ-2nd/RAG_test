@@ -1,17 +1,17 @@
 {
   "name": "get_current_time",
-  "description": "현재 날짜와 시간을 반환합니다. ISO 8601 형식으로 제공됩니다.",
+  "description": "Returns current date and time. Provided in ISO 8601 format.",
   "parameters": {
     "type": "object",
     "properties": {
       "timezone": {
         "type": "string",
-        "description": "시간대 (예: 'UTC', 'Asia/Seoul', 'America/New_York')",
+        "description": "Timezone (e.g., 'UTC', 'Asia/Seoul', 'America/New_York')",
         "default": "local"
       },
       "format": {
         "type": "string",
-        "description": "시간 형식 ('iso', 'timestamp', 'readable')",
+        "description": "Time format ('iso', 'timestamp', 'readable')",
         "default": "iso",
         "enum": ["iso", "timestamp", "readable"]
       }

@@ -16,6 +16,8 @@ import json
 import asyncio
 from datetime import datetime
 
+from adb_implementation_example import AndroidDeviceController
+
 # Logging configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,6 +51,11 @@ class LLMServer:
         self.pipeline = None
         self.tools_registry = {}
         self.model_type = None  # 모델 타입 저장
+        
+        # Android 디바이스 컨트롤러 초기화 (선택사항)
+        self.android_controller = AndroidDeviceController(default_timeout=30)
+        logger.info("Android device controller initialized")
+        
         self._initialize_llm()
         self._load_tools()
     
@@ -251,6 +258,18 @@ class LLMServer:
                     "type": "object",
                     "properties": {}
                 }
+            },
+            "control_android_device": {
+                "name": "control_android_device",
+                "description": "Control Android device using ADB shell commands",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "command_type": {"type": "string", "description": "Type of ADB command"},
+                        "shell_command": {"type": "string", "description": "Custom shell command"}
+                    },
+                    "required": ["command_type"]
+                }
             }
         }
     
@@ -369,6 +388,15 @@ class LLMServer:
             elif tool_name == "get_current_time":
                 # 현재 시간 반환
                 return {"result": datetime.now().isoformat()}
+            
+            elif tool_name == "control_android_device":                
+                try:
+                    # AndroidDeviceController 클래스 사용
+                    result = self.android_controller.control_android_device(tool_call.arguments)
+                    return result
+                    
+                except Exception as e:
+                    return {"error": f"Android device control error: {str(e)}"}
             
             else:
                 return {"error": f"Unknown tool: {tool_name}"}

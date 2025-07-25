@@ -1,0 +1,111 @@
+{
+  "name": "control_android_device",
+  "description": "Control Android device using ADB (Android Debug Bridge) shell commands. Supports various device interactions like touch, swipe, text input, app control, and system information retrieval.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "command_type": {
+        "type": "string",
+        "description": "Type of ADB command to execute",
+        "enum": ["tap", "swipe", "input_text", "keyevent", "start_app", "list_packages", "get_info", "file_operation", "custom_shell"],
+        "default": "custom_shell"
+      },
+      "device_id": {
+        "type": "string",
+        "description": "Target device ID (optional, uses default device if not specified)",
+        "default": null
+      },
+      "coordinates": {
+        "type": "object",
+        "description": "Screen coordinates for touch/swipe operations",
+        "properties": {
+          "x": {"type": "integer", "description": "X coordinate"},
+          "y": {"type": "integer", "description": "Y coordinate"},
+          "x2": {"type": "integer", "description": "End X coordinate (for swipe)"},
+          "y2": {"type": "integer", "description": "End Y coordinate (for swipe)"}
+        }
+      },
+      "text": {
+        "type": "string",
+        "description": "Text to input into the device"
+      },
+      "keycode": {
+        "type": "string",
+        "description": "Android keycode to send (e.g., 'KEYCODE_HOME', 'KEYCODE_BACK', 'KEYCODE_MENU')"
+      },
+      "package_name": {
+        "type": "string",
+        "description": "Android package name for app operations"
+      },
+      "activity_name": {
+        "type": "string",
+        "description": "Android activity name to start"
+      },
+      "file_path": {
+        "type": "string",
+        "description": "File path on device for file operations"
+      },
+      "local_path": {
+        "type": "string",
+        "description": "Local file path for push/pull operations"
+      },
+      "shell_command": {
+        "type": "string",
+        "description": "Custom shell command to execute on device"
+      },
+      "timeout": {
+        "type": "integer",
+        "description": "Command timeout in seconds",
+        "default": 30,
+        "minimum": 1,
+        "maximum": 300
+      }
+    },
+    "required": ["command_type"]
+  },
+  "examples": [
+    {
+      "command_type": "tap",
+      "coordinates": {"x": 500, "y": 1000}
+    },
+    {
+      "command_type": "swipe",
+      "coordinates": {"x": 500, "y": 1500, "x2": 500, "y2": 500}
+    },
+    {
+      "command_type": "input_text",
+      "text": "Hello World"
+    },
+    {
+      "command_type": "keyevent",
+      "keycode": "KEYCODE_HOME"
+    },
+    {
+      "command_type": "start_app",
+      "package_name": "com.android.settings",
+      "activity_name": ".Settings"
+    },
+    {
+      "command_type": "list_packages"
+    },
+    {
+      "command_type": "get_info",
+      "shell_command": "dumpsys battery"
+    },
+    {
+      "command_type": "custom_shell",
+      "shell_command": "pm list packages | grep chrome"
+    }
+  ],
+  "security_notes": [
+    "Requires ADB to be installed and device to be connected with USB debugging enabled.",
+    "Some commands may require elevated permissions on the target device.",
+    "Use with caution as this can modify device state and access sensitive information.",
+    "Ensure proper device authorization before executing commands."
+  ],
+  "common_keycodes": [
+    "KEYCODE_HOME", "KEYCODE_BACK", "KEYCODE_MENU", "KEYCODE_POWER",
+    "KEYCODE_VOLUME_UP", "KEYCODE_VOLUME_DOWN", "KEYCODE_ENTER",
+    "KEYCODE_DEL", "KEYCODE_SPACE", "KEYCODE_TAB"
+  ]
+} 
