@@ -98,6 +98,12 @@ class MCPFunctionRegistry:
             """Get current time in custom format"""
             return datetime.now().strftime(format_str)
         
+        def sleep_seconds(seconds: float) -> str:
+            """Sleep for specified number of seconds (useful for ADB timing)"""
+            import time
+            time.sleep(seconds)
+            return f"Slept for {seconds} seconds"
+        
         # Register time functions
         time_functions = [
             FunctionDefinition(
@@ -138,6 +144,25 @@ class MCPFunctionRegistry:
                 },
                 required_params=[],
                 function=get_current_time_formatted
+            ),
+            FunctionDefinition(
+                name="sleep_seconds",
+                description="Sleep for specified number of seconds (useful for ADB operations timing)",
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "seconds": {
+                            "type": "number",
+                            "description": "Number of seconds to sleep (can be decimal, e.g., 0.5 for half second)",
+                            "minimum": 0.1,
+                            "maximum": 300
+                        }
+                    },
+                    "required": ["seconds"],
+                    "additionalProperties": False
+                },
+                required_params=["seconds"],
+                function=sleep_seconds
             )
         ]
         

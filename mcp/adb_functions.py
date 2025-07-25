@@ -94,48 +94,6 @@ class ADBController:
         
         return devices
     
-    def install_apk(self, apk_path: str, device_id: Optional[str] = None) -> Dict[str, Any]:
-        """Install APK file on device"""
-        command = ["install", "-r", apk_path]
-        if device_id:
-            command = ["-s", device_id] + command
-        
-        result = self._execute_adb_command(command, timeout=60)
-        
-        if result["success"] and "Success" in result["stdout"]:
-            return {
-                "success": True,
-                "message": "APK installed successfully",
-                "details": result["stdout"]
-            }
-        else:
-            return {
-                "success": False,
-                "message": "Failed to install APK",
-                "details": result["stderr"] or result["stdout"]
-            }
-    
-    def uninstall_app(self, package_name: str, device_id: Optional[str] = None) -> Dict[str, Any]:
-        """Uninstall app by package name"""
-        command = ["uninstall", package_name]
-        if device_id:
-            command = ["-s", device_id] + command
-        
-        result = self._execute_adb_command(command)
-        
-        if result["success"] and "Success" in result["stdout"]:
-            return {
-                "success": True,
-                "message": "App uninstalled successfully",
-                "details": result["stdout"]
-            }
-        else:
-            return {
-                "success": False,
-                "message": "Failed to uninstall app",
-                "details": result["stderr"] or result["stdout"]
-            }
-    
     def get_installed_packages(self, device_id: Optional[str] = None) -> List[str]:
         """Get list of installed packages"""
         command = ["shell", "pm", "list", "packages"]
@@ -154,25 +112,6 @@ class ADBController:
                 packages.append(package_name)
         
         return packages
-    
-    def launch_app(self, package_name: str, activity_name: Optional[str] = None, 
-                  device_id: Optional[str] = None) -> Dict[str, Any]:
-        """Launch app by package name and optional activity"""
-        if activity_name:
-            command = ["shell", "am", "start", "-n", f"{package_name}/{activity_name}"]
-        else:
-            command = ["shell", "monkey", "-p", package_name, "-c", "android.intent.category.LAUNCHER", "1"]
-        
-        if device_id:
-            command = ["-s", device_id] + command
-        
-        result = self._execute_adb_command(command)
-        
-        return {
-            "success": result["success"],
-            "message": "App launched successfully" if result["success"] else "Failed to launch app",
-            "details": result["stdout"] if result["success"] else result["stderr"]
-        }
     
     def take_screenshot(self, output_path: str, device_id: Optional[str] = None) -> Dict[str, Any]:
         """Take screenshot and save to file"""
@@ -249,35 +188,6 @@ class ADBController:
             "details": result["stderr"] if not result["success"] else ""
         }
     
-    def tap_screen(self, x: int, y: int, device_id: Optional[str] = None) -> Dict[str, Any]:
-        """Tap screen at specific coordinates"""
-        command = ["shell", "input", "tap", str(x), str(y)]
-        if device_id:
-            command = ["-s", device_id] + command
-        
-        result = self._execute_adb_command(command)
-        
-        return {
-            "success": result["success"],
-            "message": "Screen tap successful" if result["success"] else "Failed to tap screen",
-            "details": result["stderr"] if not result["success"] else ""
-        }
-    
-    def swipe_screen(self, x1: int, y1: int, x2: int, y2: int, 
-                    duration: int = 500, device_id: Optional[str] = None) -> Dict[str, Any]:
-        """Swipe screen from one point to another"""
-        command = ["shell", "input", "swipe", str(x1), str(y1), str(x2), str(y2), str(duration)]
-        if device_id:
-            command = ["-s", device_id] + command
-        
-        result = self._execute_adb_command(command)
-        
-        return {
-            "success": result["success"],
-            "message": "Screen swipe successful" if result["success"] else "Failed to swipe screen",
-            "details": result["stderr"] if not result["success"] else ""
-        }
-    
     def get_battery_info(self, device_id: Optional[str] = None) -> Dict[str, Any]:
         """Get battery information"""
         command = ["shell", "dumpsys", "battery"]
@@ -296,6 +206,14 @@ class ADBController:
                 battery_info[key.strip()] = value.strip()
         
         return battery_info
+    
+    def open_settings(self, device_id: Optional[str] = None) -> Dict[str, Any]:
+        """Open device settings"""
+        command = ["shell", "am", "start", "-a", "android.settings.SETTINGS"]
+        if device_id:
+            command = ["-s", device_id] + command
+        
+        result = self._execute_adb_command(command)
     
     def send_keyevent(self, key_code: str, device_id: Optional[str] = None) -> Dict[str, Any]:
         """Send key event to device"""
@@ -337,24 +255,9 @@ def get_connected_devices() -> List[Dict[str, str]]:
     return adb_controller.get_connected_devices()
 
 
-def install_apk(apk_path: str, device_id: str = None) -> Dict[str, Any]:
-    """Install APK file on Android device"""
-    return adb_controller.install_apk(apk_path, device_id)
-
-
-def uninstall_app(package_name: str, device_id: str = None) -> Dict[str, Any]:
-    """Uninstall app by package name"""
-    return adb_controller.uninstall_app(package_name, device_id)
-
-
 def get_installed_packages(device_id: str = None) -> List[str]:
     """Get list of installed packages on device"""
     return adb_controller.get_installed_packages(device_id)
-
-
-def launch_app(package_name: str, activity_name: str = None, device_id: str = None) -> Dict[str, Any]:
-    """Launch app on Android device"""
-    return adb_controller.launch_app(package_name, activity_name, device_id)
 
 
 def take_screenshot(output_path: str, device_id: str = None) -> Dict[str, Any]:
@@ -372,19 +275,13 @@ def input_text(text: str, device_id: str = None) -> Dict[str, Any]:
     return adb_controller.input_text(text, device_id)
 
 
-def tap_screen(x: int, y: int, device_id: str = None) -> Dict[str, Any]:
-    """Tap screen at specific coordinates"""
-    return adb_controller.tap_screen(x, y, device_id)
-
-
-def swipe_screen(x1: int, y1: int, x2: int, y2: int, duration: int = 500, device_id: str = None) -> Dict[str, Any]:
-    """Swipe screen from one point to another"""
-    return adb_controller.swipe_screen(x1, y1, x2, y2, duration, device_id)
-
-
 def get_battery_info(device_id: str = None) -> Dict[str, Any]:
     """Get battery information from device"""
     return adb_controller.get_battery_info(device_id)
+
+def open_settings(device_id: str = None) -> Dict[str, Any]:
+    """Open device settings"""
+    return adb_controller.open_settings(device_id)
 
 
 # Unified key event function
@@ -416,48 +313,6 @@ ADB_FUNCTION_DEFINITIONS = [
         "function": get_connected_devices
     },
     {
-        "name": "install_apk",
-        "description": "Install APK file on Android device",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "apk_path": {
-                    "type": "string",
-                    "description": "Path to the APK file to install"
-                },
-                "device_id": {
-                    "type": "string",
-                    "description": "Device ID (optional, uses first connected device if not specified)"
-                }
-            },
-            "required": ["apk_path"],
-            "additionalProperties": False
-        },
-        "required_params": ["apk_path"],
-        "function": install_apk
-    },
-    {
-        "name": "uninstall_app",
-        "description": "Uninstall app by package name",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "package_name": {
-                    "type": "string",
-                    "description": "Package name of the app to uninstall"
-                },
-                "device_id": {
-                    "type": "string",
-                    "description": "Device ID (optional, uses first connected device if not specified)"
-                }
-            },
-            "required": ["package_name"],
-            "additionalProperties": False
-        },
-        "required_params": ["package_name"],
-        "function": uninstall_app
-    },
-    {
         "name": "get_installed_packages",
         "description": "Get list of installed packages on device",
         "parameters": {
@@ -472,31 +327,6 @@ ADB_FUNCTION_DEFINITIONS = [
         },
         "required_params": [],
         "function": get_installed_packages
-    },
-    {
-        "name": "launch_app",
-        "description": "Launch app on Android device",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "package_name": {
-                    "type": "string",
-                    "description": "Package name of the app to launch"
-                },
-                "activity_name": {
-                    "type": "string",
-                    "description": "Activity name (optional)"
-                },
-                "device_id": {
-                    "type": "string",
-                    "description": "Device ID (optional, uses first connected device if not specified)"
-                }
-            },
-            "required": ["package_name"],
-            "additionalProperties": False
-        },
-        "required_params": ["package_name"],
-        "function": launch_app
     },
     {
         "name": "take_screenshot",
@@ -557,69 +387,6 @@ ADB_FUNCTION_DEFINITIONS = [
         "function": input_text
     },
     {
-        "name": "tap_screen",
-        "description": "Tap screen at specific coordinates",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "x": {
-                    "type": "integer",
-                    "description": "X coordinate for tap"
-                },
-                "y": {
-                    "type": "integer",
-                    "description": "Y coordinate for tap"
-                },
-                "device_id": {
-                    "type": "string",
-                    "description": "Device ID (optional, uses first connected device if not specified)"
-                }
-            },
-            "required": ["x", "y"],
-            "additionalProperties": False
-        },
-        "required_params": ["x", "y"],
-        "function": tap_screen
-    },
-    {
-        "name": "swipe_screen",
-        "description": "Swipe screen from one point to another",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "x1": {
-                    "type": "integer",
-                    "description": "Starting X coordinate"
-                },
-                "y1": {
-                    "type": "integer",
-                    "description": "Starting Y coordinate"
-                },
-                "x2": {
-                    "type": "integer",
-                    "description": "Ending X coordinate"
-                },
-                "y2": {
-                    "type": "integer",
-                    "description": "Ending Y coordinate"
-                },
-                "duration": {
-                    "type": "integer",
-                    "description": "Duration of swipe in milliseconds (default: 500)",
-                    "default": 500
-                },
-                "device_id": {
-                    "type": "string",
-                    "description": "Device ID (optional, uses first connected device if not specified)"
-                }
-            },
-            "required": ["x1", "y1", "x2", "y2"],
-            "additionalProperties": False
-        },
-        "required_params": ["x1", "y1", "x2", "y2"],
-        "function": swipe_screen
-    },
-    {
         "name": "get_battery_info",
         "description": "Get battery information from device",
         "parameters": {
@@ -634,6 +401,23 @@ ADB_FUNCTION_DEFINITIONS = [
         },
         "required_params": [],
         "function": get_battery_info
+    },
+    {
+        "name": "open_settings",
+        "description": "Open device settings",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "description": "Device ID (optional, uses first connected device if not specified)"
+                }
+            },
+            "required": [],
+            "additionalProperties": False
+        },
+        "required_params": [],
+        "function": open_settings
     },
     # Unified key event function
     {
@@ -660,7 +444,7 @@ ADB_FUNCTION_DEFINITIONS = [
     # Unified shell command function
     {
         "name": "execute_shell_command",
-        "description": "Execute shell command on device (wm size, dumpsys wifi, pm clear, etc.)",
+        "description": "Execute shell command on device (wm size, dumpsys wifi, pm clear, etc.), if some task can be done by shell command but not on functions list, use this function",
         "parameters": {
             "type": "object",
             "properties": {
