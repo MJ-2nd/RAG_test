@@ -358,10 +358,12 @@ class LLMServer:
             
             if tool_name == "search_documents":
                 # RAG 검색 실행 (실제 구현 필요)
+                logger.info(f"RAG search results for: {tool_call.arguments.get('query')}")
                 return {"result": f"RAG search results for: {tool_call.arguments.get('query')}"}
             
             elif tool_name == "calculate":
                 # 계산 실행
+                logger.info(f"Calculating: {tool_call.arguments.get('expression')}")
                 expression = tool_call.arguments.get('expression', '')
                 try:
                     # 안전한 계산을 위해 eval 대신 더 안전한 방법 사용
@@ -396,9 +398,11 @@ class LLMServer:
             
             elif tool_name == "get_current_time":
                 # 현재 시간 반환
+                logger.info(f"Getting current time")
                 return {"result": datetime.now().isoformat()}
             
             elif tool_name == "control_android_device":                
+                logger.info(f"Control Android device: {tool_call.arguments}")
                 try:
                     # AndroidDeviceController 클래스 사용
                     result = self.android_controller.control_android_device(tool_call.arguments)
