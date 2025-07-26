@@ -1,0 +1,266 @@
+{
+  "metadata": {
+    "title": "ADB MCP Functions",
+    "description": "Android Debug Bridge Model Context Protocol functions for device control",
+    "version": "1.0"
+  },
+  "functions": [
+    {
+      "name": "ADBController_get_connected_devices",
+      "description": "Get list of connected Android devices",
+      "category": "device_info",
+      "parameters": {},
+      "returns": "List of connected device information with device ID and status",
+      "usage": "Use this function to check which Android devices are currently connected via ADB. Essential first step before performing any device operations.",
+      "examples": [
+        "Check connected devices before taking screenshot",
+        "Verify device availability before sending commands"
+      ],
+      "keywords": ["device", "connected", "list", "adb", "available"]
+    },
+    {
+      "name": "ADBController_get_installed_packages",
+      "description": "Get list of installed packages on device",
+      "category": "app_management",
+      "parameters": {
+        "device_id": {
+          "type": "string",
+          "required": false,
+          "description": "Device ID. If not specified, uses first connected device"
+        }
+      },
+      "returns": "List of installed package names",
+      "usage": "Use this to list all apps/packages installed on an Android device. Useful for app management and verification.",
+      "examples": [
+        "List all installed apps",
+        "Check if specific app is installed",
+        "Prepare for app-specific operations"
+      ],
+      "keywords": ["apps", "packages", "installed", "list", "applications"]
+    },
+    {
+      "name": "ADBController_take_screenshot",
+      "description": "Take screenshot and save to file",
+      "category": "screen_capture",
+      "parameters": {
+        "output_path": {
+          "type": "string",
+          "required": true,
+          "description": "Path where to save the screenshot"
+        },
+        "device_id": {
+          "type": "string",
+          "required": false,
+          "description": "Device ID. If not specified, uses first connected device"
+        }
+      },
+      "returns": "Success status and file path information",
+      "usage": "Capture the current screen of Android device and save as image file. Essential for visual verification and debugging.",
+      "examples": [
+        "Capture current screen state",
+        "Save screenshot before performing actions",
+        "Document app interface for analysis"
+      ],
+      "keywords": ["screenshot", "capture", "screen", "image", "save"]
+    },
+    {
+      "name": "ADBController_get_device_info",
+      "description": "Get detailed device information",
+      "category": "device_info",
+      "parameters": {
+        "device_id": {
+          "type": "string",
+          "required": false,
+          "description": "Device ID. If not specified, uses first connected device"
+        }
+      },
+      "returns": "Device information including model, brand, Android version, SDK version, serial",
+      "usage": "Get comprehensive information about the Android device hardware and software. Useful for compatibility checks and device identification.",
+      "examples": [
+        "Check device specifications",
+        "Verify Android version compatibility",
+        "Get device serial number"
+      ],
+      "keywords": ["device", "info", "specifications", "model", "brand", "version"]
+    },
+    {
+      "name": "ADBController_input_text",
+      "description": "Input text on Android device",
+      "category": "input_control",
+      "parameters": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "description": "Text to input on device"
+        },
+        "device_id": {
+          "type": "string",
+          "required": false,
+          "description": "Device ID. If not specified, uses first connected device"
+        }
+      },
+      "returns": "Success status",
+      "usage": "Type text into the currently focused text field on Android device. Useful for form filling and text input automation.",
+      "examples": [
+        "Enter text in search field",
+        "Fill form fields",
+        "Input username and password"
+      ],
+      "keywords": ["text", "input", "type", "keyboard", "write"]
+    },
+    {
+      "name": "ADBController_get_battery_info",
+      "description": "Get battery information from device",
+      "category": "device_info",
+      "parameters": {
+        "device_id": {
+          "type": "string",
+          "required": false,
+          "description": "Device ID. If not specified, uses first connected device"
+        }
+      },
+      "returns": "Battery status, level, temperature, health information",
+      "usage": "Check the current battery status and health of the Android device. Important for device monitoring and power management.",
+      "examples": [
+        "Check battery level",
+        "Monitor battery health",
+        "Verify charging status"
+      ],
+      "keywords": ["battery", "power", "level", "status", "health", "charge"]
+    },
+    {
+      "name": "ADBController_open_settings",
+      "description": "Open device settings",
+      "category": "navigation",
+      "parameters": {
+        "device_id": {
+          "type": "string",
+          "required": false,
+          "description": "Device ID. If not specified, uses first connected device"
+        }
+      },
+      "returns": "Success status",
+      "usage": "Launch the Android Settings app on the device. Quick way to access device configuration.",
+      "examples": [
+        "Open settings for configuration",
+        "Navigate to system settings",
+        "Access device preferences"
+      ],
+      "keywords": ["settings", "preferences", "configuration", "system"]
+    },
+    {
+      "name": "ADBController_send_keyevent",
+      "description": "Send key event to device",
+      "category": "input_control",
+      "parameters": {
+        "key_code": {
+          "type": "string",
+          "required": true,
+          "description": "Key code (e.g., KEYCODE_HOME, KEYCODE_BACK, KEYCODE_CAMERA, KEYCODE_VOLUME_UP, KEYCODE_POWER)"
+        },
+        "device_id": {
+          "type": "string",
+          "required": false,
+          "description": "Device ID. If not specified, uses first connected device"
+        }
+      },
+      "returns": "Success status",
+      "usage": "Simulate pressing hardware or software keys on Android device. Essential for navigation and system control.",
+      "examples": [
+        "Press home button to go to launcher",
+        "Press back button to navigate",
+        "Press volume keys to adjust sound"
+      ],
+      "keywords": ["key", "button", "press", "home", "back", "volume", "power"],
+      "common_keycodes": [
+        "KEYCODE_HOME",
+        "KEYCODE_BACK", 
+        "KEYCODE_MENU",
+        "KEYCODE_POWER",
+        "KEYCODE_VOLUME_UP",
+        "KEYCODE_VOLUME_DOWN",
+        "KEYCODE_CAMERA"
+      ]
+    },
+    {
+      "name": "ADBController_execute_shell_command",
+      "description": "Execute shell command on device",
+      "category": "advanced_control",
+      "parameters": {
+        "shell_command": {
+          "type": "string",
+          "required": true,
+          "description": "Shell command to execute"
+        },
+        "device_id": {
+          "type": "string",
+          "required": false,
+          "description": "Device ID. If not specified, uses first connected device"
+        }
+      },
+      "returns": "Command output, error, and success status",
+      "usage": "Run any shell command on the Android device. This is the most flexible function for advanced operations not covered by specific functions.",
+      "examples": [
+        "Get screen resolution with 'wm size'",
+        "Tap at coordinates with 'input tap X Y'",
+        "Clear app data with 'pm clear package.name'"
+      ],
+      "keywords": ["shell", "command", "execute", "advanced", "custom"],
+      "common_commands": [
+        {
+          "command": "wm size",
+          "description": "Get screen resolution"
+        },
+        {
+          "command": "dumpsys wifi",
+          "description": "Get WiFi information"
+        },
+        {
+          "command": "input tap X Y", 
+          "description": "Tap at coordinates"
+        },
+        {
+          "command": "input swipe X1 Y1 X2 Y2",
+          "description": "Swipe gesture"
+        },
+        {
+          "command": "pm clear package.name",
+          "description": "Clear app data"
+        },
+        {
+          "command": "getprop",
+          "description": "Get system properties"
+        }
+      ]
+    }
+  ],
+  "usage_patterns": [
+    {
+      "pattern": "Text Input and Navigation", 
+      "steps": [
+        "ADBController_input_text('Hello World')",
+        "ADBController_send_keyevent('KEYCODE_HOME')",
+        "ADBController_send_keyevent('KEYCODE_BACK')"
+      ]
+    },
+    {
+      "pattern": "App Management",
+      "steps": [
+        "ADBController_get_installed_packages()",
+        "ADBController_execute_shell_command('pm clear com.example.app')",
+        "ADBController_execute_shell_command('am start -n com.example.app/.MainActivity')"
+      ]
+    }
+  ],
+  "best_practices": [
+    "Handle timeouts gracefully for long-running commands",
+    "Use ADBController_execute_shell_command for operations not covered by specific functions"
+  ],
+  "error_scenarios": [
+    "No devices connected",
+    "ADB not installed or in PATH",
+    "Device unauthorized (check USB debugging)",
+    "Command timeout (device unresponsive)",
+    "Insufficient permissions for certain operations"
+  ]
+} 
